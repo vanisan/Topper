@@ -32,6 +32,15 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
+-- Додавання колонки balance, якщо вона не існує
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'balance') THEN
+        ALTER TABLE public.profiles ADD COLUMN balance numeric NOT NULL DEFAULT 0;
+    END IF;
+END $$;
+
+
 -- Коментарі до таблиці для ясності
 COMMENT ON TABLE public.profiles IS 'Stores user profile information.';
 
@@ -95,7 +104,16 @@ CREATE POLICY "Allow users to send messages" ON public.messages
 -- Примітка: Якщо ви запускаєте цей скрипт повторно, наступна команда може викликати помилку,
 -- повідомляючи, що таблиця 'messages' вже є частиною публікації.
 -- Це очікувано і безпечно ігнорувати.
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'messages'
+  ) then
+    alter publication supabase_realtime add table public.messages;
+  end if;
+end $$;
 
 
 -- 5. АВТОМАТИЧНЕ СТВОРЕННЯ ПРОФІЛЮ ДЛЯ НОВИХ КОРИСТУВАЧІВ
@@ -118,18 +136,20 @@ begin
     location,
     hobbies,
     "aboutMe",
-    "relationshipStatus"
+    "relationshipStatus",
+    balance
   )
   values (
     new.id,
-    new.raw_user_meta_data->>'login', -- Get REAL login from metadata
+    lower(new.raw_user_meta_data->>'login'), -- Get REAL login from metadata and convert to lowercase
     new.raw_user_meta_data->>'name',
     new.raw_user_meta_data->>'avatarUrl',
     (new.raw_user_meta_data->>'age')::integer,
     new.raw_user_meta_data->>'location',
     (new.raw_user_meta_data->'hobbies'),
     new.raw_user_meta_data->>'aboutMe',
-    new.raw_user_meta_data->>'relationshipStatus'
+    new.raw_user_meta_data->>'relationshipStatus',
+    0
   );
   return new;
 end;
@@ -140,6 +160,41 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+
+-- 6. RPC FUNCTIONS
+create or replace function public.send_gift_and_update_balance(
+    sender_id uuid,
+    receiver_id uuid,
+    gift_cost numeric,
+    gift_payload jsonb
+)
+returns text
+language plpgsql
+security definer -- Important!
+as $$
+declare
+  sender_balance numeric;
+begin
+  -- Check sender's balance
+  select balance into sender_balance from public.profiles where id = sender_id;
+  if sender_balance is null or sender_balance < gift_cost then
+    raise exception 'Insufficient balance';
+  end if;
+
+  -- Deduct cost from sender
+  update public.profiles
+  set balance = balance - gift_cost
+  where id = sender_id;
+
+  -- Add gift to receiver
+  update public.profiles
+  set "giftsReceived" = "giftsReceived" || gift_payload
+  where id = receiver_id;
+
+  return 'Gift sent successfully';
+end;
+$$;
 
 
 -- ### КІНЕЦЬ СКРИПТУ ###

@@ -1,10 +1,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { User, Gift, Message } from './types';
-import { mockGifts } from './data/mockData';
 import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
-import GiftModal from './components/GiftModal';
 import Navbar from './components/Navbar';
 import MenuPage from './components/MenuPage';
 import AuthFlow, { RegistrationData } from './components/AuthFlow';
@@ -14,6 +12,9 @@ import ChatPage from './components/ChatPage';
 import HomePage from './components/HomePage';
 import { supabase } from './supabaseClient';
 import { Session } from '@supabase/supabase-js';
+import CompleteProfile from './components/CompleteProfile';
+import ShopPage from './components/ShopPage';
+import TopUpPage from './components/TopUpPage';
 
 type View = 
     | { name: 'rating' }
@@ -25,7 +26,7 @@ type View =
     | { name: 'chat'; withUser: User }
     | { name: 'info' }
     | { name: 'topup' }
-    | { name: 'shop' };
+    | { name: 'shop'; forUser?: User };
 
 // Dummy domain for creating technical emails from logins
 const DUMMY_DOMAIN = 'topper.app';
@@ -35,10 +36,7 @@ const App: React.FC = () => {
     const [session, setSession] = useState<Session | null>(null);
     const [users, setUsers] = useState<User[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
-    const [gifts] = useState<Gift[]>(mockGifts);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const [selectedUserForGift, setSelectedUserForGift] = useState<User | null>(null);
-    const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
     const [view, setView] = useState<View>({ name: 'rating' });
     const [theme, setTheme] = useState(localStorage.getItem('topper-theme') || 'dark');
     
@@ -190,65 +188,77 @@ const App: React.FC = () => {
         }
     };
 
-    const handleSendGift = async (userId: string, gift: Gift) => {
-        const targetUser = users.find(u => u.id === userId);
-        if (!targetUser) return;
-        
-        const newGifts = [...targetUser.giftsReceived, gift];
-
-        const { error } = await supabase
-            .from('profiles')
-            .update({ giftsReceived: newGifts })
-            .eq('id', userId);
-
+    const handleSendGift = async (receiver: User, gift: Gift) => {
+        if (!currentUser) return false;
+        if (currentUser.balance < gift.cost) {
+            alert('Недостатньо коштів на балансі.');
+            return false;
+        }
+    
+        const { error } = await supabase.rpc('send_gift_and_update_balance', {
+            sender_id: currentUser.id,
+            receiver_id: receiver.id,
+            gift_cost: gift.cost,
+            gift_payload: gift,
+        });
+    
         if (error) {
             console.error('Error sending gift:', error);
-            alert("Не вдалося надіслати подарунок.");
+            alert(`Не вдалося надіслати подарунок: ${error.message}`);
+            return false;
         } else {
-            setUsers(prev => prev.map(u => u.id === userId ? { ...u, giftsReceived: newGifts } : u));
+            alert('Подарунок надіслано!');
+            await fetchData();
+            setView({ name: 'profile', user: receiver });
+            return true;
         }
-
-        setIsGiftModalOpen(false);
-        setSelectedUserForGift(null);
-    };
-
-    const openGiftModal = (user: User) => {
-        setSelectedUserForGift(user);
-        setIsGiftModalOpen(true);
     };
     
-    const handleRegister = async (data: RegistrationData): Promise<{success: boolean, error?: string}> => {
-        const technicalEmail = `${data.login}@${DUMMY_DOMAIN}`;
 
-        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+    const handleNavigateToShop = (user: User) => {
+        setView({ name: 'shop', forUser: user });
+    };
+    
+    const handleRegister = async (data: Pick<RegistrationData, 'login' | 'password'>): Promise<{success: boolean, error?: string, rateLimited?: boolean}> => {
+        const technicalEmail = `${data.login}@${DUMMY_DOMAIN}`;
+        const { error: signUpError } = await supabase.auth.signUp({
             email: technicalEmail,
             password: data.password!,
             options: {
                 data: {
-                    login: data.login, // Pass the real login
-                    name: data.name,
-                    avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.login}`,
-                    age: data.age,
-                    location: data.location,
-                    hobbies: data.hobbies,
-                    aboutMe: data.aboutMe,
-                    relationshipStatus: data.relationshipStatus,
+                    login: data.login,
+                    // The trigger requires a non-null name, so we pass an empty string temporarily.
+                    name: '',
                 }
             }
         });
 
         if (signUpError) {
             console.error("Sign up error:", signUpError);
-            return { success: false, error: signUpError.message };
-        }
-        if (!user) return { success: false, error: "Не вдалося створити користувача."};
+            const errorMessage = signUpError.message.toLowerCase();
 
-        // Profile is created by the trigger. The onAuthStateChange listener will handle the rest.
+            if (errorMessage.includes('user already registered')) {
+                return { success: false, error: 'Цей логін вже зайнятий. Спробуйте інший.' };
+            }
+            if (errorMessage.includes('rate limit')) {
+                 return { 
+                     success: false, 
+                     error: 'Перевищено ліміт спроб. Ймовірно, ваш пароль занадто простий або ви спробували забагато разів. Зачекайте хвилину і спробуйте знову з надійним паролем.', 
+                     rateLimited: true 
+                 };
+            }
+            if (errorMessage.includes('weak password')) {
+                 return { success: false, error: 'Пароль занадто простий. Будь ласка, використайте комбінацію літер, цифр та спецсимволів.' };
+            }
+
+            return { success: false, error: 'Невідома помилка реєстрації. Спробуйте пізніше.' };
+        }
+        
         return { success: true };
     };
 
     const handleLogin = async (login: string, password: string): Promise<{success: boolean, error?: string}> => {
-        const technicalEmail = `${login}@${DUMMY_DOMAIN}`;
+        const technicalEmail = `${login.toLowerCase()}@${DUMMY_DOMAIN}`;
         const { error } = await supabase.auth.signInWithPassword({
             email: technicalEmail,
             password: password,
@@ -283,9 +293,32 @@ const App: React.FC = () => {
 
         if (error) {
             console.error("Profile update error:", error);
+            alert("Не вдалося оновити профіль.")
         } else {
             setCurrentUser(data);
             setUsers(prev => prev.map(u => u.id === currentUser.id ? data : u));
+        }
+    };
+    
+    const handleTopUp = async (amount: number): Promise<boolean> => {
+        if (!currentUser) return false;
+        const newBalance = (currentUser.balance || 0) + amount;
+        
+        const { data, error } = await supabase
+            .from('profiles')
+            .update({ balance: newBalance })
+            .eq('id', currentUser.id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Top-up error:', error);
+            alert('Не вдалося поповнити баланс.');
+            return false;
+        } else {
+            setCurrentUser(data);
+            alert(`Баланс успішно поповнено на ${amount} грн!`);
+            return true;
         }
     };
 
@@ -310,24 +343,26 @@ const App: React.FC = () => {
         if (!currentUser) return null;
         switch (view.name) {
             case 'rating':
-                return <Leaderboard users={sortedUsers} currentUser={currentUser} onLike={handleLikeUser} onGift={openGiftModal} onViewProfile={(user) => setView({ name: 'profile', user })} />;
+                return <Leaderboard users={sortedUsers} currentUser={currentUser} onLike={handleLikeUser} onGift={handleNavigateToShop} onViewProfile={(user) => setView({ name: 'profile', user })} />;
             case 'home':
                 const topUsersInCity = sortedUsers.filter(u => u.location === currentUser.location).slice(0, 3);
                 return <HomePage city={currentUser.location || ''} topUsers={topUsersInCity} onViewProfile={(user) => setView({ name: 'profile', user })} />;
             case 'me':
-                return <ProfilePage user={currentUser} rating={calculateRating(currentUser)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onLike={handleLikeUser} onGift={openGiftModal} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
+                return <ProfilePage user={currentUser} rating={calculateRating(currentUser)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onLike={handleLikeUser} onGift={handleNavigateToShop} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
             case 'menu':
                 return <MenuPage theme={theme} setTheme={setTheme} onNavigate={(page) => setView({ name: page as any })} onLogout={handleLogout} />;
             case 'profile':
-                return <ProfilePage user={view.user} rating={calculateRating(view.user)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onBack={() => setView({ name: 'rating' })} onLike={handleLikeUser} onGift={openGiftModal} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
+                return <ProfilePage user={view.user} rating={calculateRating(view.user)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onBack={() => setView({ name: 'rating' })} onLike={handleLikeUser} onGift={handleNavigateToShop} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
             case 'messages':
                 return <MessagesPage currentUser={currentUser} allUsers={users} messages={messages} onViewChat={(user) => setView({ name: 'chat', withUser: user })} onBack={() => setView({ name: 'menu' })} />;
             case 'chat':
                 return <ChatPage currentUser={currentUser} chatPartner={view.withUser} messages={messages} onSendMessage={handleSendMessage} onBack={() => setView({ name: 'messages' })} />;
-            case 'info':
-            case 'topup':
             case 'shop':
-                 return <div className="text-center p-10 text-gray-500 dark:text-gray-400">{view.name} в розробці. <button onClick={() => setView({name: 'menu'})} className="text-purple-500">Назад</button></div>;
+                return <ShopPage currentUser={currentUser} targetUser={view.forUser} onSendGift={handleSendGift} onBack={() => view.forUser ? setView({ name: 'profile', user: view.forUser }) : setView({ name: 'menu' })} />;
+            case 'topup':
+                return <TopUpPage currentUser={currentUser} onTopUp={handleTopUp} onBack={() => setView({ name: 'menu' })} />;
+            case 'info':
+                 return <div className="text-center p-10 text-gray-500 dark:text-gray-400">{'info'} в розробці. <button onClick={() => setView({name: 'menu'})} className="text-purple-500">Назад</button></div>;
             default:
                 return null;
         }
@@ -341,20 +376,17 @@ const App: React.FC = () => {
         return <AuthFlow onRegister={handleRegister} onLogin={handleLogin}/>;
     }
 
+    // After login/signup, if profile is not complete (name is empty), show the completion form.
+    if (!currentUser.name) {
+        return <CompleteProfile user={currentUser} onComplete={handleUpdateProfile} />;
+    }
+
     return (
         <div className="h-full grid grid-rows-[auto_1fr] font-sans">
             <Header currentUser={currentUser} />
             <main className="overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20">
                 {renderContent()}
             </main>
-            {isGiftModalOpen && selectedUserForGift && (
-                <GiftModal
-                    user={selectedUserForGift}
-                    gifts={gifts}
-                    onSendGift={(gift) => handleSendGift(selectedUserForGift.id, gift)}
-                    onClose={() => setIsGiftModalOpen(false)}
-                />
-            )}
             <Navbar activeTab={activeTab} onTabChange={(tab) => setView({name: tab as any})} />
         </div>
     );

@@ -22,6 +22,7 @@ export interface User {
   avatarUrl: string;
   location?: string;
   rating: number; // This will be calculated on the fly
+  balance: number; // User's internal currency balance
   likesReceived: number;
   giftsReceived: Gift[];
   likesGiven: number; // Max 3 per day
