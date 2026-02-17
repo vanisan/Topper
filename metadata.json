@@ -1,0 +1,7 @@
+{
+  "name": "Topper Social Network",
+  "description": "A location-based social network where users compete for the top spot in their city through likes, profile completeness, and virtual gifts. The top 3 users in each location passively earn rating points.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
