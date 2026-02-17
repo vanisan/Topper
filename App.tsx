@@ -215,9 +215,18 @@ const App: React.FC = () => {
     };
     
     const handleRegister = async (data: RegistrationData): Promise<{success: boolean, error?: string}> => {
+        // Generate a default name from the email. Example: 'user@email.com' -> 'user'
+        const name = data.login.split('@')[0] || `user_${Date.now()}`;
+
         const { data: { user }, error: signUpError } = await supabase.auth.signUp({
             email: data.login,
             password: data.password!,
+            options: {
+                data: {
+                    name: name,
+                    avatarUrl: `https://i.pravatar.cc/150?u=${data.login}`,
+                }
+            }
         });
 
         if (signUpError) {
@@ -226,29 +235,7 @@ const App: React.FC = () => {
         }
         if (!user) return { success: false, error: "Не вдалося створити користувача."};
 
-        const { error: profileError } = await supabase.from('profiles').insert({
-            id: user.id,
-            login: data.login,
-            name: data.name,
-            age: data.age,
-            avatarUrl: data.avatarUrl || `https://picsum.photos/seed/${data.name}/200`,
-            location: data.location,
-            hobbies: data.hobbies,
-            aboutMe: data.aboutMe,
-            relationshipStatus: data.relationshipStatus,
-            likesReceived: 0,
-            giftsReceived: [],
-            likesGiven: 0,
-            likeTimestamps: {},
-            passiveRating: 0,
-        });
-
-        if (profileError) {
-            console.error("Profile creation error:", profileError);
-             return { success: false, error: "Не вдалося створити профіль." };
-        }
-        
-        await fetchData();
+        // Profile is created by the trigger. The onAuthStateChange listener will handle the rest.
         return { success: true };
     };
 

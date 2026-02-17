@@ -136,7 +136,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                         </button>
                     )}
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-4 dark:[text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">{user.name}, {user.age}</h2>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-4 dark:[text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">{user.name}{user.age ? `, ${user.age}` : ''}</h2>
                 <p className="text-gray-500 dark:text-gray-400">@{user.login}</p>
             </div>
             
