@@ -18,7 +18,6 @@ export interface Message {
 export interface User {
   id:string;
   login: string;
-  password?: string;
   name: string;
   avatarUrl: string;
   location?: string;

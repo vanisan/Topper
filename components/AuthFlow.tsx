@@ -19,8 +19,8 @@ export interface RegistrationData {
 }
 
 interface AuthFlowProps {
-    onRegister: (data: RegistrationData) => boolean;
-    onLogin: (login: string, password: string) => boolean;
+    onRegister: (data: RegistrationData) => Promise<{success: boolean, error?: string}>;
+    onLogin: (login: string, password: string) => Promise<{success: boolean, error?: string}>;
 }
 
 const HOBBY_OPTIONS = ["Спорт", "Музика", "Мистецтво", "Ігри", "Подорожі", "Читання", "Кулінарія", "Кіно", "Технології", "Мода"];
@@ -61,17 +61,21 @@ const AuthFlow: React.FC<AuthFlowProps> = ({ onRegister, onLogin }) => {
     );
 };
 
-const LoginForm: React.FC<{ onLogin: (login: string, password: string) => boolean; onBack: () => void; }> = ({ onLogin, onBack }) => {
+const LoginForm: React.FC<{ onLogin: (login: string, password: string) => Promise<{success: boolean, error?: string}>; onBack: () => void; }> = ({ onLogin, onBack }) => {
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const success = onLogin(login, password);
-        if (!success) {
-            setError('Неправильний логін або пароль.');
+        setError('');
+        setIsLoading(true);
+        const result = await onLogin(login, password);
+        if (!result.success) {
+            setError(result.error || 'Не вдалося увійти.');
         }
+        setIsLoading(false);
     };
     
     return (
@@ -80,9 +84,9 @@ const LoginForm: React.FC<{ onLogin: (login: string, password: string) => boolea
                 <h2 className="text-3xl font-bold text-center text-purple-600 dark:text-purple-400 mb-6">Вхід</h2>
                 {error && <p className="text-red-500 text-center mb-4">{error}</p>}
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <input type="text" value={login} onChange={e => setLogin(e.target.value)} placeholder="Логін" required className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
+                    <input type="email" value={login} onChange={e => setLogin(e.target.value)} placeholder="Email (Логін)" required className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
                     <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Пароль" required className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
-                    <button type="submit" className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors shadow-lg">Увійти</button>
+                    <button type="submit" disabled={isLoading} className="w-full bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors shadow-lg disabled:bg-gray-400">{isLoading ? 'Вхід...' : 'Увійти'}</button>
                     <button type="button" onClick={onBack} className="w-full text-center text-gray-600 dark:text-gray-400 hover:underline mt-2">Назад</button>
                 </form>
              </div>
@@ -91,9 +95,10 @@ const LoginForm: React.FC<{ onLogin: (login: string, password: string) => boolea
 };
 
 
-const RegisterForm: React.FC<{ onRegister: (data: RegistrationData) => boolean; onBack: () => void; }> = ({ onRegister, onBack }) => {
+const RegisterForm: React.FC<{ onRegister: (data: RegistrationData) => Promise<{success: boolean, error?: string}>; onBack: () => void; }> = ({ onRegister, onBack }) => {
     const [step, setStep] = useState(1);
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [isUploaderOpen, setIsUploaderOpen] = useState(false);
     const [formData, setFormData] = useState<Partial<RegistrationData> & { passwordConfirm?: string }>({
         login: '',
@@ -131,7 +136,7 @@ const RegisterForm: React.FC<{ onRegister: (data: RegistrationData) => boolean; 
             case 1: 
                 return formData.name && formData.name.length > 1 && 
                        formData.age && formData.age >= 18 &&
-                       formData.login && formData.login.length >= 3 &&
+                       formData.login && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.login) &&
                        formData.password && formData.password.length >= 6 &&
                        formData.password === formData.passwordConfirm;
             case 2: return !!formData.location; // Must select a city
@@ -144,13 +149,16 @@ const RegisterForm: React.FC<{ onRegister: (data: RegistrationData) => boolean; 
     const nextStep = () => setStep(s => s + 1);
     const prevStep = () => setStep(s => s - 1);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (isStepValid) {
-            const success = onRegister(formData as RegistrationData);
-            if (!success) {
-                setError('Цей логін вже зайнятий. Поверніться на перший крок, щоб змінити його.');
-                setStep(1); // Go back to step 1 on failure
+            setError('');
+            setIsLoading(true);
+            const result = await onRegister(formData as RegistrationData);
+            if (!result.success) {
+                setError(result.error || 'Помилка реєстрації.');
+                setStep(1); 
             }
+            setIsLoading(false);
         }
     };
     
@@ -195,12 +203,12 @@ const RegisterForm: React.FC<{ onRegister: (data: RegistrationData) => boolean; 
                                 </button>
                             </div>
                             <div className="flex-grow space-y-4">
-                               <input type="text" name="name" placeholder="Ім'я" value={formData.name} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
+                               <input type="text" name="name" placeholder="Ім'я" value={formData.name || ''} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
                                 <input type="number" name="age" placeholder="Вік (18+)" value={formData.age || ''} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
                             </div>
                         </div>
                          <hr className="border-gray-200 dark:border-gray-600"/>
-                        <input type="text" name="login" placeholder="Логін (мін. 3 символи)" value={formData.login} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
+                        <input type="email" name="login" placeholder="Email (це буде ваш логін)" value={formData.login} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
                         <input type="password" name="password" placeholder="Пароль (мін. 6 символів)" value={formData.password} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
                         <input type="password" name="passwordConfirm" placeholder="Підтвердьте пароль" value={formData.passwordConfirm} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none" />
                     </div>
@@ -245,8 +253,8 @@ const RegisterForm: React.FC<{ onRegister: (data: RegistrationData) => boolean; 
                         </button>
                     )}
                      {step === totalSteps && (
-                        <button onClick={handleSubmit} disabled={!isStepValid} className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 dark:disabled:bg-gray-500">
-                           Завершити
+                        <button onClick={handleSubmit} disabled={!isStepValid || isLoading} className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors disabled:bg-gray-400 dark:disabled:bg-gray-500">
+                           {isLoading ? 'Реєстрація...' : 'Завершити'}
                         </button>
                     )}
                 </div>

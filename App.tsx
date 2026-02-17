@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { User, Gift, Message } from './types';
-import { mockUsers, mockGifts, mockMessages } from './data/mockData';
+import { mockGifts } from './data/mockData';
 import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
 import GiftModal from './components/GiftModal';
@@ -12,6 +12,8 @@ import ProfilePage from './components/ProfilePage';
 import MessagesPage from './components/MessagesPage';
 import ChatPage from './components/ChatPage';
 import HomePage from './components/HomePage';
+import { supabase } from './supabaseClient';
+import { Session } from '@supabase/supabase-js';
 
 type View = 
     | { name: 'rating' }
@@ -26,41 +28,87 @@ type View =
     | { name: 'shop' };
 
 const App: React.FC = () => {
-    const [users, setUsers] = useState<User[]>(() => {
-        const storedUsers = localStorage.getItem('topper-allUsers');
-        return storedUsers ? JSON.parse(storedUsers) : mockUsers;
-    });
-    const [messages, setMessages] = useState<Message[]>(() => {
-        const storedMessages = localStorage.getItem('topper-messages');
-        return storedMessages ? JSON.parse(storedMessages) : mockMessages;
-    });
+    const [isLoading, setIsLoading] = useState(true);
+    const [session, setSession] = useState<Session | null>(null);
+    const [users, setUsers] = useState<User[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [gifts] = useState<Gift[]>(mockGifts);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [selectedUserForGift, setSelectedUserForGift] = useState<User | null>(null);
     const [isGiftModalOpen, setIsGiftModalOpen] = useState(false);
     const [view, setView] = useState<View>({ name: 'rating' });
-    const [theme, setTheme] = useState('dark');
+    const [theme, setTheme] = useState(localStorage.getItem('topper-theme') || 'dark');
     
-    // Derived from view state to control Navbar active tab
     const activeTab = ['rating', 'home', 'me', 'menu'].includes(view.name) ? view.name : '';
-
-
+    
     useEffect(() => {
-        const storedUser = localStorage.getItem('topper-currentUser');
-        if (storedUser) {
-            setCurrentUser(JSON.parse(storedUser));
-        }
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
-    
-    useEffect(() => {
-        localStorage.setItem('topper-allUsers', JSON.stringify(users));
-    }, [users]);
-    
-    useEffect(() => {
-        localStorage.setItem('topper-messages', JSON.stringify(messages));
-    }, [messages]);
+
+    const fetchData = useCallback(async () => {
+        if (!session) {
+            setIsLoading(false);
+            return;
+        };
+
+        setIsLoading(true);
+        try {
+            const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profileError) throw profileError;
+            setCurrentUser(profileData);
+
+            const { data: usersData, error: usersError } = await supabase.from('profiles').select('*');
+            if (usersError) throw usersError;
+            setUsers(usersData);
+
+            const { data: messagesData, error: messagesError } = await supabase.from('messages').select('*');
+            if (messagesError) throw messagesError;
+            setMessages(messagesData.map(m => ({ ...m, timestamp: new Date(m.timestamp).getTime() })));
+
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [session]);
 
     useEffect(() => {
+        fetchData();
+    }, [session, fetchData]);
+    
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const channel = supabase.channel('public:messages')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+                const newMessage = payload.new as any;
+                 if (newMessage.receiverId === currentUser.id || newMessage.senderId === currentUser.id) {
+                     setMessages(prev => [...prev, { ...newMessage, timestamp: new Date(newMessage.timestamp).getTime() }]);
+                }
+            })
+            .subscribe();
+        
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [currentUser]);
+
+
+    useEffect(() => {
+        localStorage.setItem('topper-theme', theme);
         if (theme === 'dark') {
             document.documentElement.classList.add('dark');
         } else {
@@ -82,102 +130,81 @@ const App: React.FC = () => {
         return profilePoints + likePoints + giftPoints + user.passiveRating;
     }, []);
 
-    const sortedUsers = React.useMemo(() => 
+    const sortedUsers = useMemo(() => 
         [...users]
             .map(user => ({ ...user, rating: calculateRating(user) }))
             .sort((a, b) => b.rating - a.rating),
     [users, calculateRating]);
 
-    const applyPassiveRating = useCallback(() => {
-        setUsers(prevUsers => {
-            // Group users by location
-            const usersByLocation: { [location: string]: User[] } = {};
-            for (const user of prevUsers) {
-                if (user.location) {
-                    if (!usersByLocation[user.location]) {
-                        usersByLocation[user.location] = [];
-                    }
-                    usersByLocation[user.location].push(user);
-                }
-            }
-
-            const allTopUserIds = new Set<string>();
-
-            // Find top 3 for each location
-            for (const location in usersByLocation) {
-                const top3InLocation = usersByLocation[location]
-                    .map(user => ({ ...user, rating: calculateRating(user) }))
-                    .sort((a, b) => b.rating - a.rating)
-                    .slice(0, 3)
-                    .map(u => u.id);
-                
-                top3InLocation.forEach(id => allTopUserIds.add(id));
-            }
-            
-            // Apply passive rating
-            return prevUsers.map(user => {
-                if (allTopUserIds.has(user.id)) {
-                    return { ...user, passiveRating: user.passiveRating + 2 };
-                }
-                return user;
-            });
-        });
-    }, [calculateRating]);
-
-    useEffect(() => {
-        const interval = setInterval(applyPassiveRating, 24 * 60 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [applyPassiveRating]);
-
-
-    const handleLikeUser = (userId: string) => {
+    const handleLikeUser = async (userId: string) => {
         if (!currentUser) return;
         
-        setUsers(prevUsers => {
-            const updatedCurrentUserInList = prevUsers.find(u => u.id === currentUser.id);
-            if (!updatedCurrentUserInList || updatedCurrentUserInList.likesGiven >= 3) {
-                alert("У вас не залишилося лайків на сьогодні.");
-                return prevUsers;
-            }
+        if (currentUser.likesGiven >= 3) {
+            alert("У вас не залишилося лайків на сьогодні.");
+            return;
+        }
 
-            const now = new Date().getTime();
-            const canLike = !updatedCurrentUserInList.likeTimestamps[userId] || (now - updatedCurrentUserInList.likeTimestamps[userId] > 24 * 60 * 60 * 1000);
+        const now = new Date().getTime();
+        const canLike = !currentUser.likeTimestamps[userId] || (now - currentUser.likeTimestamps[userId] > 24 * 60 * 60 * 1000);
+        
+        if (!canLike) {
+             alert("Ви можете лайкати цього користувача лише раз на день.");
+             return;
+        }
+
+        const targetUser = users.find(u => u.id === userId);
+        if (!targetUser) return;
+        
+        const newLikeTimestamps = { ...currentUser.likeTimestamps, [userId]: now };
+
+        try {
+            const { error: targetUserError } = await supabase
+                .from('profiles')
+                .update({ likesReceived: targetUser.likesReceived + 1 })
+                .eq('id', userId);
             
-            if (!canLike) {
-                 alert("Ви можете лайкати цього користувача лише раз на день.");
-                 return prevUsers;
-            }
+            if (targetUserError) throw targetUserError;
 
-            return prevUsers.map(user => {
-                if (user.id === userId) {
-                    return { ...user, likesReceived: user.likesReceived + 1 };
-                }
-                if (user.id === currentUser.id) {
-                    const updatedUser = {
-                        ...user,
-                        likesGiven: user.likesGiven + 1,
-                        likeTimestamps: { ...user.likeTimestamps, [userId]: now }
-                    };
-                    const { password: _, ...userForState } = updatedUser;
-                    setCurrentUser(userForState); 
-                    localStorage.setItem('topper-currentUser', JSON.stringify(userForState));
-                    return updatedUser;
-                }
-                return user;
-            });
-        });
+            const { data: updatedCurrentUser, error: currentUserError } = await supabase
+                .from('profiles')
+                .update({ likesGiven: currentUser.likesGiven + 1, likeTimestamps: newLikeTimestamps })
+                .eq('id', currentUser.id)
+                .select()
+                .single();
+
+            if (currentUserError) throw currentUserError;
+
+            setCurrentUser(updatedCurrentUser);
+            setUsers(prev => prev.map(u => {
+                if (u.id === userId) return { ...u, likesReceived: u.likesReceived + 1 };
+                if (u.id === currentUser.id) return updatedCurrentUser;
+                return u;
+            }));
+
+        } catch (error) {
+            console.error("Error liking user:", error);
+            alert("Не вдалося поставити лайк.");
+        }
     };
 
-    const handleSendGift = (userId: string, gift: Gift) => {
-        setUsers(prevUsers => prevUsers.map(user => {
-            if (user.id === userId) {
-                return {
-                    ...user,
-                    giftsReceived: [...user.giftsReceived, gift]
-                };
-            }
-            return user;
-        }));
+    const handleSendGift = async (userId: string, gift: Gift) => {
+        const targetUser = users.find(u => u.id === userId);
+        if (!targetUser) return;
+        
+        const newGifts = [...targetUser.giftsReceived, gift];
+
+        const { error } = await supabase
+            .from('profiles')
+            .update({ giftsReceived: newGifts })
+            .eq('id', userId);
+
+        if (error) {
+            console.error('Error sending gift:', error);
+            alert("Не вдалося надіслати подарунок.");
+        } else {
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, giftsReceived: newGifts } : u));
+        }
+
         setIsGiftModalOpen(false);
         setSelectedUserForGift(null);
     };
@@ -187,67 +214,100 @@ const App: React.FC = () => {
         setIsGiftModalOpen(true);
     };
     
-    const handleRegister = (data: RegistrationData): boolean => {
-        if (users.some(user => user.login === data.login)) {
-            alert('Цей логін вже зайнятий.');
-            return false;
-        }
+    const handleRegister = async (data: RegistrationData): Promise<{success: boolean, error?: string}> => {
+        const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+            email: data.login,
+            password: data.password!,
+        });
 
-        const newUser: User = {
-            id: 'user-' + new Date().getTime(),
+        if (signUpError) {
+            console.error("Sign up error:", signUpError);
+            return { success: false, error: signUpError.message };
+        }
+        if (!user) return { success: false, error: "Не вдалося створити користувача."};
+
+        const { error: profileError } = await supabase.from('profiles').insert({
+            id: user.id,
+            login: data.login,
+            name: data.name,
+            age: data.age,
             avatarUrl: data.avatarUrl || `https://picsum.photos/seed/${data.name}/200`,
-            rating: 0,
+            location: data.location,
+            hobbies: data.hobbies,
+            aboutMe: data.aboutMe,
+            relationshipStatus: data.relationshipStatus,
             likesReceived: 0,
             giftsReceived: [],
             likesGiven: 0,
             likeTimestamps: {},
             passiveRating: 0,
-            ...data
-        };
+        });
+
+        if (profileError) {
+            console.error("Profile creation error:", profileError);
+             return { success: false, error: "Не вдалося створити профіль." };
+        }
         
-        const { password, ...newUserForState } = newUser;
-        
-        setUsers(prev => [newUser, ...prev]);
-        setCurrentUser(newUserForState);
-        localStorage.setItem('topper-currentUser', JSON.stringify(newUserForState));
-        return true;
+        await fetchData();
+        return { success: true };
     };
 
-    const handleLogin = (login: string, password: string): boolean => {
-        const userToLogin = users.find(u => u.login === login && u.password === password);
-        if (userToLogin) {
-            const { password, ...userForState } = userToLogin;
-            setCurrentUser(userForState);
-            localStorage.setItem('topper-currentUser', JSON.stringify(userForState));
-            return true;
+    const handleLogin = async (login: string, password: string): Promise<{success: boolean, error?: string}> => {
+        const { error } = await supabase.auth.signInWithPassword({
+            email: login,
+            password: password,
+        });
+
+        if (error) {
+            console.error("Login error:", error);
+            return { success: false, error: "Неправильний логін або пароль." };
         }
-        return false;
+        return { success: true };
+    }
+    
+    const handleLogout = async () => {
+        const { error } = await supabase.auth.signOut();
+        if (error) console.error("Logout error:", error);
+        else {
+            setCurrentUser(null);
+            setUsers([]);
+            setMessages([]);
+            setView({ name: 'rating' });
+        }
     }
 
-    const handleUpdateProfile = (updatedData: Partial<User>) => {
+    const handleUpdateProfile = async (updatedData: Partial<User>) => {
         if (!currentUser) return;
-        const fullCurrentUser = users.find(u => u.id === currentUser.id);
-        if (!fullCurrentUser) return;
-        const updatedUserWithPassword = { ...fullCurrentUser, ...updatedData };
-        setUsers(prevUsers => 
-            prevUsers.map(u => u.id === currentUser.id ? updatedUserWithPassword : u)
-        );
-        const { password: _, ...userForState } = updatedUserWithPassword;
-        setCurrentUser(userForState);
-        localStorage.setItem('topper-currentUser', JSON.stringify(userForState));
+        const { error, data } = await supabase
+            .from('profiles')
+            .update(updatedData)
+            .eq('id', currentUser.id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Profile update error:", error);
+        } else {
+            setCurrentUser(data);
+            setUsers(prev => prev.map(u => u.id === currentUser.id ? data : u));
+        }
     };
 
-    const handleSendMessage = (receiverId: string, text: string) => {
+    const handleSendMessage = async (receiverId: string, text: string) => {
         if (!currentUser || !text.trim()) return;
 
-        const newMessage: Message = {
-            id: 'msg-' + new Date().getTime(),
+        const newMessage = {
             senderId: currentUser.id,
             receiverId: receiverId,
             text: text.trim(),
-            timestamp: Date.now()
+            timestamp: new Date().toISOString()
         };
-        setMessages(prev => [...prev, newMessage]);
+
+        const { error } = await supabase.from('messages').insert(newMessage);
+        if (error) {
+            console.error('Error sending message:', error);
+            alert("Не вдалося відправити повідомлення.");
+        }
     };
 
     const renderContent = () => {
@@ -261,7 +321,7 @@ const App: React.FC = () => {
             case 'me':
                 return <ProfilePage user={currentUser} rating={calculateRating(currentUser)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onLike={handleLikeUser} onGift={openGiftModal} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
             case 'menu':
-                return <MenuPage theme={theme} setTheme={setTheme} onNavigate={(page) => setView({ name: page as any })} />;
+                return <MenuPage theme={theme} setTheme={setTheme} onNavigate={(page) => setView({ name: page as any })} onLogout={handleLogout} />;
             case 'profile':
                 return <ProfilePage user={view.user} rating={calculateRating(view.user)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onBack={() => setView({ name: 'rating' })} onLike={handleLikeUser} onGift={openGiftModal} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
             case 'messages':
@@ -276,8 +336,12 @@ const App: React.FC = () => {
                 return null;
         }
     };
+    
+    if (isLoading) {
+        return <div className="h-full flex items-center justify-center text-xl font-bold">Завантаження...</div>
+    }
 
-    if (!currentUser) {
+    if (!session || !currentUser) {
         return <AuthFlow onRegister={handleRegister} onLogin={handleLogin}/>;
     }
 
