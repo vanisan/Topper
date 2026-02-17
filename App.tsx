@@ -27,6 +27,9 @@ type View =
     | { name: 'topup' }
     | { name: 'shop' };
 
+// Dummy domain for creating technical emails from logins
+const DUMMY_DOMAIN = 'topper.app';
+
 const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [session, setSession] = useState<Session | null>(null);
@@ -215,16 +218,21 @@ const App: React.FC = () => {
     };
     
     const handleRegister = async (data: RegistrationData): Promise<{success: boolean, error?: string}> => {
-        // Generate a default name from the email. Example: 'user@email.com' -> 'user'
-        const name = data.login.split('@')[0] || `user_${Date.now()}`;
+        const technicalEmail = `${data.login}@${DUMMY_DOMAIN}`;
 
         const { data: { user }, error: signUpError } = await supabase.auth.signUp({
-            email: data.login,
+            email: technicalEmail,
             password: data.password!,
             options: {
                 data: {
-                    name: name,
-                    avatarUrl: `https://i.pravatar.cc/150?u=${data.login}`,
+                    login: data.login, // Pass the real login
+                    name: data.name,
+                    avatarUrl: data.avatarUrl || `https://i.pravatar.cc/150?u=${data.login}`,
+                    age: data.age,
+                    location: data.location,
+                    hobbies: data.hobbies,
+                    aboutMe: data.aboutMe,
+                    relationshipStatus: data.relationshipStatus,
                 }
             }
         });
@@ -240,8 +248,9 @@ const App: React.FC = () => {
     };
 
     const handleLogin = async (login: string, password: string): Promise<{success: boolean, error?: string}> => {
+        const technicalEmail = `${login}@${DUMMY_DOMAIN}`;
         const { error } = await supabase.auth.signInWithPassword({
-            email: login,
+            email: technicalEmail,
             password: password,
         });
 

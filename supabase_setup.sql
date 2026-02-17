@@ -15,7 +15,7 @@
 -- Вона пов'язана з таблицею `auth.users` через `id`.
 CREATE TABLE IF NOT EXISTS public.profiles (
     id uuid NOT NULL,
-    login text NOT NULL,
+    login text NOT NULL UNIQUE,
     name text NOT NULL,
     "avatarUrl" text NULL,
     location text NULL,
@@ -113,20 +113,31 @@ begin
     id,
     login,
     name,
-    "avatarUrl"
+    "avatarUrl",
+    age,
+    location,
+    hobbies,
+    "aboutMe",
+    "relationshipStatus"
   )
   values (
     new.id,
-    new.email, -- Логін - це email
-    new.raw_user_meta_data->>'name', -- Comes from client-side default
-    new.raw_user_meta_data->>'avatarUrl' -- Comes from client-side default
+    new.raw_user_meta_data->>'login', -- Get REAL login from metadata
+    new.raw_user_meta_data->>'name',
+    new.raw_user_meta_data->>'avatarUrl',
+    (new.raw_user_meta_data->>'age')::integer,
+    new.raw_user_meta_data->>'location',
+    (new.raw_user_meta_data->'hobbies'),
+    new.raw_user_meta_data->>'aboutMe',
+    new.raw_user_meta_data->>'relationshipStatus'
   );
   return new;
 end;
 $$;
 
 -- Тригер, який викликає функцію handle_new_user() після створення нового користувача
-create or replace trigger on_auth_user_created
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
