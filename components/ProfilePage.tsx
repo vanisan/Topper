@@ -167,6 +167,33 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
             
             <NoteBlock note={user.note} />
 
+            {/* Quick Actions for others profiles - extremely compact horizontal layout */}
+            {!isCurrentUser && (
+                <div className="mt-4 flex space-x-2">
+                    <button 
+                        onClick={() => onLike(user.id)} 
+                        className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white transition-colors shadow-md"
+                    >
+                        <HeartIcon className="w-4 h-4" />
+                        <span className="text-xs font-black uppercase">Лайк</span>
+                    </button>
+                    <button 
+                        onClick={() => onGift(user)} 
+                        className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white transition-colors shadow-md"
+                    >
+                        <GiftIcon className="w-4 h-4" />
+                        <span className="text-xs font-black uppercase">Дар</span>
+                    </button>
+                    <button 
+                        onClick={() => onSendMessage(user)} 
+                        className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white transition-colors shadow-md"
+                    >
+                        <MessageIcon className="w-4 h-4" />
+                        <span className="text-xs font-black uppercase">Чат</span>
+                    </button>
+                </div>
+            )}
+
             <div className="mt-6 bg-gray-100 dark:bg-gray-700/50 rounded-lg divide-y divide-gray-200 dark:divide-gray-600 px-4">
                 <InfoRow icon={LocationPinIcon} label="Місто" value={user.location} />
                 <InfoRow icon={SparklesIcon} label="Хобі" value={user.hobbies} />
@@ -175,7 +202,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
             </div>
 
             <div className="mt-8">
-                {isCurrentUser ? (
+                {isCurrentUser && (
                     <button 
                         onClick={() => setIsEditing(true)} 
                         className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors shadow-lg"
@@ -183,21 +210,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                         <PencilIcon className="w-5 h-5" />
                         <span>Редагувати профіль</span>
                     </button>
-                ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                        <button onClick={() => onLike(user.id)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white transition-colors shadow-sm">
-                            <HeartIcon className="w-6 h-6" />
-                            <span className="text-xs font-bold">Лайк</span>
-                        </button>
-                         <button onClick={() => onGift(user)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition-colors shadow-sm">
-                            <GiftIcon className="w-6 h-6" />
-                            <span className="text-xs font-bold">Подарунок</span>
-                        </button>
-                         <button onClick={() => onSendMessage(user)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-green-600 hover:bg-green-500 text-white transition-colors shadow-sm">
-                            <MessageIcon className="w-6 h-6" />
-                            <span className="text-xs font-bold">Написати</span>
-                        </button>
-                    </div>
                 )}
             </div>
         </div>

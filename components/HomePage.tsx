@@ -13,7 +13,7 @@ const RankConfig = {
         height: 'h-40 sm:h-48',
         avatarSize: 'w-20 h-20 sm:w-28 sm:h-28',
         borderColor: 'border-amber-400',
-        bgColor: 'bg-amber-50/90 dark:bg-amber-900/20',
+        bgColor: 'bg-amber-100/90 dark:bg-amber-900/40', // Slightly more opaque
         textColor: 'text-amber-700 dark:text-amber-400',
         order: 'order-2',
         label: '1 місце'
@@ -22,7 +22,7 @@ const RankConfig = {
         height: 'h-32 sm:h-40',
         avatarSize: 'w-16 h-16 sm:w-24 sm:h-24',
         borderColor: 'border-slate-300',
-        bgColor: 'bg-slate-50/90 dark:bg-slate-800/30',
+        bgColor: 'bg-slate-100/90 dark:bg-slate-800/50', // Slightly more opaque
         textColor: 'text-slate-600 dark:text-slate-300',
         order: 'order-1',
         label: '2 місце'
@@ -31,7 +31,7 @@ const RankConfig = {
         height: 'h-28 sm:h-36',
         avatarSize: 'w-14 h-14 sm:w-20 sm:h-20',
         borderColor: 'border-orange-400',
-        bgColor: 'bg-orange-50/90 dark:bg-orange-900/20',
+        bgColor: 'bg-orange-100/90 dark:bg-orange-900/40', // Slightly more opaque
         textColor: 'text-orange-700 dark:text-orange-400',
         order: 'order-3',
         label: '3 місце'
@@ -57,12 +57,12 @@ const PodiumSpot: React.FC<{ user: User; rank: 1 | 2 | 3; onViewProfile: (user: 
             </button>
 
             {/* Pedestal Section */}
-            <div className={`w-full ${config.height} ${config.bgColor} rounded-t-2xl border-x-2 border-t-2 ${config.borderColor} flex flex-col items-center p-1 sm:p-2 shadow-lg text-center`}>
+            <div className={`w-full ${config.height} ${config.bgColor} rounded-t-2xl border-x-2 border-t-2 ${config.borderColor} flex flex-col items-center p-1 sm:p-2 shadow-lg text-center backdrop-blur-sm`}>
                 <span className={`text-[10px] sm:text-sm font-black uppercase tracking-tighter ${config.textColor} mb-1`}>
                     {config.label}
                 </span>
                 
-                <h3 className="text-[11px] sm:text-base font-black text-gray-900 dark:text-white leading-tight truncate w-full mb-1" title={user.name}>
+                <h3 className="text-[11px] sm:text-base font-black text-gray-900 dark:text-white leading-tight truncate w-full mb-1 px-0.5" title={user.name}>
                     {user.name}
                 </h3>
 
@@ -70,7 +70,7 @@ const PodiumSpot: React.FC<{ user: User; rank: 1 | 2 | 3; onViewProfile: (user: 
                     <div className="bg-green-600 dark:bg-green-500 text-white text-[8px] sm:text-[10px] font-black px-1 sm:px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
                         +2 БАЛИ
                     </div>
-                    <span className="block text-[7px] sm:text-[9px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
+                    <span className="block text-[7px] sm:text-[9px] text-gray-600 dark:text-gray-300 font-bold mt-0.5">
                         ЗА 24 ГОД
                     </span>
                 </div>
