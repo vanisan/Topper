@@ -11,7 +11,7 @@ import MessagesPage from './components/MessagesPage';
 import ChatPage from './components/ChatPage';
 import HomePage from './components/HomePage';
 import { supabase } from './supabaseClient';
-import { Session } from '@supabase/supabase-js';
+import { Session, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import CompleteProfile from './components/CompleteProfile';
 import ShopPage from './components/ShopPage';
 import TopUpPage from './components/TopUpPage';
@@ -93,13 +93,28 @@ const App: React.FC = () => {
     useEffect(() => {
         if (!currentUser) return;
 
-        const channel = supabase.channel('public:messages')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-                const newMessage = payload.new as any;
-                 if (newMessage.receiverId === currentUser.id || newMessage.senderId === currentUser.id) {
-                     setMessages(prev => [...prev, { ...newMessage, timestamp: new Date(newMessage.timestamp).getTime() }]);
-                }
-            })
+        const handleRealtimeMessage = (payload: RealtimePostgresChangesPayload<{ [key: string]: any }>) => {
+            const eventType = payload.eventType;
+            const record = (eventType === 'DELETE' ? payload.old : payload.new) as Message;
+    
+            if (!record || (record.receiverId !== currentUser.id && record.senderId !== currentUser.id)) {
+                return;
+            }
+    
+            if (eventType === 'INSERT') {
+                setMessages(prev => {
+                    if (prev.find(m => m.id === record.id)) return prev;
+                    return [...prev, { ...record, timestamp: new Date(record.timestamp).getTime() }];
+                });
+            } else if (eventType === 'UPDATE') {
+                setMessages(prev => prev.map(msg => msg.id === record.id ? { ...record, timestamp: new Date(record.timestamp).getTime() } : msg));
+            } else if (eventType === 'DELETE') {
+                setMessages(prev => prev.filter(msg => msg.id !== record.id));
+            }
+        };
+
+        const channel = supabase.channel('messages-channel')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, handleRealtimeMessage)
             .subscribe();
         
         return () => {
@@ -136,6 +151,12 @@ const App: React.FC = () => {
             .map(user => ({ ...user, rating: calculateRating(user) }))
             .sort((a, b) => b.rating - a.rating),
     [users, calculateRating]);
+    
+    const unreadMessagesCount = useMemo(() => {
+        if (!currentUser) return 0;
+        return messages.filter(m => m.receiverId === currentUser.id && !m.is_read).length;
+    }, [messages, currentUser]);
+
 
     const handleLikeUser = async (userId: string) => {
         if (!currentUser) return;
@@ -350,7 +371,7 @@ const App: React.FC = () => {
             case 'me':
                 return <ProfilePage user={currentUser} rating={calculateRating(currentUser)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onLike={handleLikeUser} onGift={handleNavigateToShop} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
             case 'menu':
-                return <MenuPage theme={theme} setTheme={setTheme} onNavigate={(page) => setView({ name: page as any })} onLogout={handleLogout} />;
+                return <MenuPage theme={theme} setTheme={setTheme} onNavigate={(page) => setView({ name: page as any })} onLogout={handleLogout} unreadCount={unreadMessagesCount} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} />;
             case 'profile':
                 return <ProfilePage user={view.user} rating={calculateRating(view.user)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onBack={() => setView({ name: 'rating' })} onLike={handleLikeUser} onGift={handleNavigateToShop} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
             case 'messages':

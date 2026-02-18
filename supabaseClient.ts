@@ -17,4 +17,17 @@ if (!supabaseKey) {
     alert(message);
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: {
+        // Увімкнення збереження сесії. Це дозволяє користувачам залишатися
+        // в системі навіть після закриття браузера чи вкладки.
+        // Supabase за замовчуванням використовує localStorage для цього.
+        persistSession: true,
+        
+        // Автоматичне оновлення токена доступу, щоб сесія не переривалася.
+        autoRefreshToken: true,
+        
+        // Дозволяє виявляти сесію в URL (корисно для посилань відновлення пароля тощо).
+        detectSessionInUrl: true,
+    },
+});

@@ -14,24 +14,36 @@ interface MessagesPageProps {
 const MessagesPage: React.FC<MessagesPageProps> = ({ currentUser, allUsers, messages, onViewChat, onBack }) => {
 
     const conversations = useMemo(() => {
-        const convos: { [userId: string]: { user: User; lastMessage: Message } } = {};
+        const chatPartners = new Map<string, { user: User; messages: Message[] }>();
 
         messages.forEach(msg => {
             const otherUserId = msg.senderId === currentUser.id ? msg.receiverId : msg.senderId;
-            if (otherUserId === currentUser.id) return; // Skip messages sent to oneself
-
-            if (!convos[otherUserId] || msg.timestamp > convos[otherUserId].lastMessage.timestamp) {
+            
+            if (!chatPartners.has(otherUserId)) {
                 const user = allUsers.find(u => u.id === otherUserId);
                 if (user) {
-                    convos[otherUserId] = {
-                        user: user,
-                        lastMessage: msg
-                    };
+                    chatPartners.set(otherUserId, { user, messages: [] });
                 }
             }
+            
+            const partnerData = chatPartners.get(otherUserId);
+            if (partnerData) {
+                partnerData.messages.push(msg);
+            }
         });
-        
-        return Object.values(convos).sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
+
+        const convos = Array.from(chatPartners.values()).map(data => {
+            const lastMessage = data.messages.sort((a, b) => b.timestamp - a.timestamp)[0];
+            const unreadCount = data.messages.filter(m => m.receiverId === currentUser.id && !m.is_read).length;
+            
+            return {
+                user: data.user,
+                lastMessage,
+                unreadCount
+            };
+        });
+
+        return convos.sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
     }, [messages, currentUser, allUsers]);
 
 
@@ -50,20 +62,29 @@ const MessagesPage: React.FC<MessagesPageProps> = ({ currentUser, allUsers, mess
                 </div>
             ) : (
                 <ul className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto">
-                    {conversations.map(({ user, lastMessage }) => (
+                    {conversations.map(({ user, lastMessage, unreadCount }) => (
                         <li key={user.id}>
                             <button onClick={() => onViewChat(user)} className="w-full flex items-center space-x-4 p-3 text-left hover:bg-gray-100/50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
                                 <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 rounded-full" />
                                 <div className="flex-1 overflow-hidden">
-                                    <p className="font-semibold text-gray-900 dark:text-white">{user.name}</p>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                                        {lastMessage.senderId === currentUser.id && "Ви: "}
-                                        {lastMessage.text}
-                                    </p>
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-semibold text-gray-900 dark:text-white">{user.name}</p>
+                                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                                            {new Date(lastMessage.timestamp).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-start mt-1">
+                                        <p className={`text-sm text-gray-500 dark:text-gray-400 truncate pr-2 ${unreadCount > 0 ? 'font-bold text-gray-800 dark:text-gray-200' : ''}`}>
+                                            {lastMessage.senderId === currentUser.id && "Ви: "}
+                                            {lastMessage.text}
+                                        </p>
+                                        {unreadCount > 0 && (
+                                            <span className="bg-red-500 text-white text-xs font-bold w-5 min-w-[20px] h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                                                {unreadCount > 9 ? '9+' : unreadCount}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                                <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    {new Date(lastMessage.timestamp).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' })}
-                                </span>
                             </button>
                         </li>
                     ))}

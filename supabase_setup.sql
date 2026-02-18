@@ -40,6 +40,22 @@ BEGIN
     END IF;
 END $$;
 
+-- Додавання колонки note, якщо вона не існує
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'note') THEN
+        ALTER TABLE public.profiles ADD COLUMN note text NULL;
+    END IF;
+END $$;
+
+-- Додавання колонки profileBgUrl, якщо вона не існує
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profileBgUrl') THEN
+        ALTER TABLE public.profiles ADD COLUMN "profileBgUrl" text NULL;
+    END IF;
+END $$;
+
 
 -- Коментарі до таблиці для ясності
 COMMENT ON TABLE public.profiles IS 'Stores user profile information.';
@@ -57,6 +73,15 @@ CREATE TABLE IF NOT EXISTS public.messages (
     CONSTRAINT messages_receiverId_fkey FOREIGN KEY ("receiverId") REFERENCES public.profiles(id) ON DELETE CASCADE,
     CONSTRAINT messages_senderId_fkey FOREIGN KEY ("senderId") REFERENCES public.profiles(id) ON DELETE CASCADE
 );
+
+-- Додавання колонки is_read, якщо вона не існує
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.messages'::regclass AND attname = 'is_read') THEN
+        ALTER TABLE public.messages ADD COLUMN is_read boolean NOT NULL DEFAULT false;
+    END IF;
+END $$;
+
 
 -- Коментарі до таблиці для ясності
 COMMENT ON TABLE public.messages IS 'Stores chat messages between users.';
@@ -89,6 +114,7 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 -- Видаляємо існуючі політики, щоб застосувати оновлені
 DROP POLICY IF EXISTS "Allow users to read their own messages" ON public.messages;
 DROP POLICY IF EXISTS "Allow users to send messages" ON public.messages;
+DROP POLICY IF EXISTS "Allow receivers to mark messages as read" ON public.messages;
 
 -- Правила для messages:
 -- 1) Дозволити користувачам читати повідомлення, де вони є відправником або отримувачем.
@@ -98,6 +124,10 @@ CREATE POLICY "Allow users to read their own messages" ON public.messages
 -- 2) Дозволити користувачам створювати (відправляти) повідомлення від свого імені.
 CREATE POLICY "Allow users to send messages" ON public.messages
     FOR INSERT WITH CHECK (auth.uid() = "senderId");
+
+-- 3) Дозволити отримувачам позначати повідомлення як прочитані.
+CREATE POLICY "Allow receivers to mark messages as read" ON public.messages
+    FOR UPDATE USING (auth.uid() = "receiverId") WITH CHECK (auth.uid() = "receiverId");
 
 
 -- 4. НАЛАШТУВАННЯ REALTIME ДЛЯ ПОВІДОМЛЕНЬ

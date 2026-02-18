@@ -37,41 +37,46 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
     return (
         <div 
             onClick={handleCardClick}
-            className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg flex items-center space-x-4 border-2 ${cardBorder} transition-all duration-300 ${!isCurrentUser ? 'hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer' : ''}`}
+            className={`group relative p-4 rounded-xl shadow-lg border-2 ${cardBorder} transition-all duration-300 overflow-hidden bg-gray-200 dark:bg-gray-800 ${!isCurrentUser ? 'cursor-pointer' : ''}`}
+            style={user.profileBgUrl ? { backgroundImage: `url(${user.profileBgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
             role={!isCurrentUser ? "button" : undefined}
             tabIndex={!isCurrentUser ? 0 : -1}
             onKeyDown={(e) => { if (e.key === 'Enter' && !isCurrentUser) onViewProfile(user) }}
         >
-            <div className={`text-2xl font-bold w-10 text-center ${textColor}`}>
-                {rank}
-            </div>
-            <img src={user.avatarUrl} alt={user.name} className="w-16 h-16 rounded-full border-2 border-gray-300 dark:border-gray-600 pointer-events-none" />
-            <div className="flex-grow pointer-events-none">
-                <div className="flex items-center space-x-2">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white dark:[text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">{user.name}</h3>
-                    {isCurrentUser && <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">Ви</span>}
+            <div className={`absolute inset-0 bg-white/95 dark:bg-gray-800/95 transition-colors duration-300 ${!isCurrentUser ? 'group-hover:bg-white/90 dark:group-hover:bg-gray-700/90' : ''}`}></div>
+
+            <div className="relative z-10 flex items-center space-x-4">
+                <div className={`text-2xl font-bold w-10 text-center ${textColor}`}>
+                    {rank}
                 </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{user.location}</p>
-                <p className="text-xl font-bold text-purple-500 dark:text-purple-400 mt-1">{user.rating} pts</p>
-            </div>
-            {!isCurrentUser && (
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 z-10">
-                    <button
-                        onClick={() => onLike(user.id)}
-                        className="p-2 rounded-full bg-pink-600 hover:bg-pink-500 transition-colors text-white"
-                        aria-label={`Like ${user.name}`}
-                    >
-                        <HeartIcon className="w-6 h-6" />
-                    </button>
-                    <button
-                        onClick={() => onGift(user)}
-                        className="p-2 rounded-full bg-sky-600 hover:bg-sky-500 transition-colors text-white"
-                        aria-label={`Send gift to ${user.name}`}
-                    >
-                        <GiftIcon className="w-6 h-6" />
-                    </button>
+                <img src={user.avatarUrl} alt={user.name} className="w-16 h-16 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                <div className="flex-grow">
+                    <div className="flex items-center space-x-2">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white dark:[text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">{user.name}</h3>
+                        {isCurrentUser && <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">Ви</span>}
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{user.location}</p>
+                    <p className="text-xl font-bold text-purple-500 dark:text-purple-400 mt-1">{user.rating} pts</p>
                 </div>
-            )}
+                {!isCurrentUser && (
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 z-20">
+                        <button
+                            onClick={() => onLike(user.id)}
+                            className="p-2 rounded-full bg-pink-600 hover:bg-pink-500 transition-colors text-white"
+                            aria-label={`Like ${user.name}`}
+                        >
+                            <HeartIcon className="w-6 h-6" />
+                        </button>
+                        <button
+                            onClick={() => onGift(user)}
+                            className="p-2 rounded-full bg-sky-600 hover:bg-sky-500 transition-colors text-white"
+                            aria-label={`Send gift to ${user.name}`}
+                        >
+                            <GiftIcon className="w-6 h-6" />
+                        </button>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

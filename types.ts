@@ -13,6 +13,7 @@ export interface Message {
   receiverId: string;
   text: string;
   timestamp: number;
+  is_read: boolean;
 }
 
 export interface User {
@@ -33,4 +34,6 @@ export interface User {
   hobbies?: string[];
   aboutMe?: string;
   relationshipStatus?: string;
+  note?: string;
+  profileBgUrl?: string;
 }

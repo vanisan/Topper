@@ -3,6 +3,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { User, Message } from '../types';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import SendIcon from './icons/SendIcon';
+import { supabase } from '../supabaseClient';
 
 interface ChatPageProps {
     currentUser: User;
@@ -28,6 +29,27 @@ const ChatPage: React.FC<ChatPageProps> = ({ currentUser, chatPartner, messages,
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [conversationMessages]);
+
+    useEffect(() => {
+        const markMessagesAsRead = async () => {
+            const unreadMessageIds = conversationMessages
+                .filter(msg => msg.receiverId === currentUser.id && !msg.is_read)
+                .map(msg => msg.id);
+    
+            if (unreadMessageIds.length > 0) {
+                const { error } = await supabase
+                    .from('messages')
+                    .update({ is_read: true })
+                    .in('id', unreadMessageIds);
+    
+                if (error) {
+                    console.error('Error marking messages as read:', error);
+                }
+            }
+        };
+    
+        markMessagesAsRead();
+    }, [conversationMessages, currentUser.id]);
 
     const handleSend = (e: React.FormEvent) => {
         e.preventDefault();

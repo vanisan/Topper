@@ -6,9 +6,18 @@ import getCroppedImg, { Area } from '../utils/cropImage';
 interface ImageUploaderProps {
     onClose: () => void;
     onCropComplete: (croppedImage: string) => void;
+    aspectRatio?: number;
+    cropShape?: 'round' | 'rect';
+    maxFileSizeMB?: number;
 }
 
-const ImageUploader: React.FC<ImageUploaderProps> = ({ onClose, onCropComplete }) => {
+const ImageUploader: React.FC<ImageUploaderProps> = ({ 
+    onClose, 
+    onCropComplete,
+    aspectRatio = 1,
+    cropShape = 'round',
+    maxFileSizeMB = 5
+}) => {
     const [imageSrc, setImageSrc] = useState<string | null>(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
@@ -23,8 +32,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onClose, onCropComplete }
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
             
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                setError('Файл занадто великий. Максимальний розмір 5MB.');
+            if (file.size > maxFileSizeMB * 1024 * 1024) { // 5MB limit
+                setError(`Файл занадто великий. Максимальний розмір ${maxFileSizeMB}MB.`);
                 return;
             }
             if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
@@ -58,7 +67,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onClose, onCropComplete }
                 
                 {!imageSrc ? (
                     <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-10">
-                        <p className="mb-4 text-center text-gray-500 dark:text-gray-400">Оберіть файл до 5MB (JPG, PNG)</p>
+                        <p className="mb-4 text-center text-gray-500 dark:text-gray-400">Оберіть файл до {maxFileSizeMB}MB (JPG, PNG)</p>
                         <input
                             type="file"
                             id="file-upload"
@@ -77,11 +86,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onClose, onCropComplete }
                                 image={imageSrc}
                                 crop={crop}
                                 zoom={zoom}
-                                aspect={1}
+                                aspect={aspectRatio}
                                 onCropChange={setCrop}
                                 onZoomChange={setZoom}
                                 onCropComplete={onCropCompleteCallback}
-                                cropShape="round"
+                                cropShape={cropShape}
                                 showGrid={false}
                            />
                         </div>

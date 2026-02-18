@@ -8,19 +8,23 @@ import ShoppingBagIcon from './icons/ShoppingBagIcon';
 import ChevronRightIcon from './icons/ChevronRightIcon';
 import MessageIcon from './icons/MessageIcon';
 import LogoutIcon from './icons/LogoutIcon';
+import { User } from '../types';
 
 interface MenuPageProps {
     theme: string;
     setTheme: (theme: string) => void;
     onNavigate: (view: string) => void;
     onLogout: () => void;
+    unreadCount: number;
+    currentUser: User;
+    onUpdateProfile: (updatedData: Partial<User>) => void;
 }
 
-const MenuPage: React.FC<MenuPageProps> = ({ theme, setTheme, onNavigate, onLogout }) => {
+const MenuPage: React.FC<MenuPageProps> = ({ theme, setTheme, onNavigate, onLogout, unreadCount, currentUser, onUpdateProfile }) => {
     const [activeSubView, setActiveSubView] = useState<string | null>(null);
 
     const menuItems = [
-        { id: 'messages', label: 'Мої повідомлення', icon: MessageIcon, action: () => onNavigate('messages') },
+        { id: 'messages', label: 'Мої повідомлення', icon: MessageIcon, action: () => onNavigate('messages'), badge: unreadCount },
         { id: 'info', label: 'Інфо', icon: InfoIcon, action: () => onNavigate('info') },
         { id: 'settings', label: 'Налаштування', icon: SettingsIcon, action: () => setActiveSubView('settings') },
         { id: 'topup', label: 'Поповнення', icon: CreditCardIcon, action: () => onNavigate('topup') },
@@ -46,6 +50,11 @@ const MenuPage: React.FC<MenuPageProps> = ({ theme, setTheme, onNavigate, onLogo
                                 <div className="flex items-center space-x-4">
                                     <Icon className="w-6 h-6 text-purple-500 dark:text-purple-400" />
                                     <span className={`text-lg font-medium text-gray-900 dark:text-white ${item.id === 'logout' ? 'text-red-600 dark:text-red-400' : ''}`}>{item.label}</span>
+                                    {item.badge > 0 && (
+                                        <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                                            {item.badge > 9 ? '9+' : item.badge}
+                                        </span>
+                                    )}
                                 </div>
                                 <ChevronRightIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                             </button>
@@ -57,7 +66,7 @@ const MenuPage: React.FC<MenuPageProps> = ({ theme, setTheme, onNavigate, onLogo
     );
     
     if (activeSubView === 'settings') {
-        return <SettingsPage theme={theme} setTheme={setTheme} onBack={() => setActiveSubView(null)} />;
+        return <SettingsPage theme={theme} setTheme={setTheme} onBack={() => setActiveSubView(null)} onUpdateProfile={onUpdateProfile} />;
     }
     
     return renderMainView();

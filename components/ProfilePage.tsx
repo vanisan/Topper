@@ -38,6 +38,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
         hobbies: user.hobbies || [],
         aboutMe: user.aboutMe || '',
         relationshipStatus: user.relationshipStatus || '',
+        note: user.note || '',
     });
 
     const isCurrentUser = user.id === currentUser.id;
@@ -67,9 +68,19 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 
     if (isEditing && isCurrentUser) {
         return (
-            <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl space-y-6">
+            <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
                  <h2 className="text-2xl font-bold text-center text-purple-600 dark:text-purple-300">Редагувати профіль</h2>
                  
+                 <div className="space-y-2">
+                    <label htmlFor="note-input" className="font-semibold text-gray-700 dark:text-gray-300">Заметка (до 200 символів)</label>
+                    <div className="relative">
+                        <textarea id="note-input" name="note" placeholder="Ваш статус, оголошення або цитата..." value={formData.note} onChange={handleInputChange} rows={3} maxLength={200} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none pr-16"></textarea>
+                        <span className="absolute bottom-2 right-3 text-xs text-gray-400 dark:text-gray-500">
+                            {formData.note?.length || 0} / 200
+                        </span>
+                    </div>
+                </div>
+
                  <div className="space-y-2">
                     <label className="font-semibold text-gray-700 dark:text-gray-300">Місто</label>
                     <select name="location" value={formData.location} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none">
@@ -123,7 +134,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
         )}
         <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl relative">
             {onBack && (
-                 <button onClick={onBack} className="absolute top-4 left-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700/50">
+                 <button onClick={onBack} className="absolute top-4 left-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700/50 z-10">
                     <ArrowLeftIcon className="w-6 h-6 text-gray-800 dark:text-white" />
                 </button>
             )}
@@ -137,22 +148,23 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                     )}
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-4 dark:[text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">{user.name}{user.age ? `, ${user.age}` : ''}</h2>
-                <p className="text-gray-500 dark:text-gray-400">@{user.login}</p>
             </div>
             
-            <div className="mt-6">
+            <div className="mt-4">
                  <div className="flex justify-between items-center mb-1 text-sm">
                     <span className="font-bold text-purple-500 dark:text-purple-300">Рейтинг</span>
                     <span className="font-bold text-gray-900 dark:text-white">{rating}</span>
                  </div>
                  <RatingBar rating={rating} />
             </div>
+            
+            <NoteBlock note={user.note} />
 
-            <div className="mt-8 space-y-4">
+            <div className="mt-6 bg-gray-100 dark:bg-gray-700/50 rounded-lg divide-y divide-gray-200 dark:divide-gray-600 px-4">
                 <InfoRow icon={LocationPinIcon} label="Місто" value={user.location} />
-                <InfoRow icon={SparklesIcon} label="Хобі" value={user.hobbies?.join(', ')} />
+                <InfoRow icon={SparklesIcon} label="Хобі" value={user.hobbies} />
                 <InfoRow icon={UsersIcon} label="Статус" value={user.relationshipStatus} />
-                <InfoRow icon={DocumentTextIcon} label="Про себе" value={user.aboutMe} isBlock={true} />
+                <InfoRow icon={DocumentTextIcon} label="Про себе" value={user.aboutMe} />
             </div>
 
             <div className="mt-8">
@@ -186,16 +198,31 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
     );
 };
 
-const InfoRow: React.FC<{ icon: React.FC<{className?: string}>, label: string, value?: string, isBlock?: boolean }> = ({ icon: Icon, label, value, isBlock }) => (
-    <div className="bg-gray-100 dark:bg-gray-700/50 p-4 rounded-lg">
-        <div className="flex items-start space-x-3">
-            <Icon className="w-6 h-6 text-purple-500 dark:text-purple-400 mt-1" />
-            <div className="flex-1">
-                <h4 className="font-semibold text-gray-500 dark:text-gray-400">{label}</h4>
-                <p className={`text-gray-800 dark:text-white ${!value && 'text-gray-400 dark:text-gray-500 italic'} ${isBlock && 'mt-2'}`}>{value || 'Не вказано'}</p>
-            </div>
-        </div>
+const NoteBlock: React.FC<{ note?: string }> = ({ note }) => (
+    <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800/50">
+        <h4 className="font-semibold text-sm text-yellow-700 dark:text-yellow-300 mb-2">Заметка</h4>
+        <p className="text-gray-800 dark:text-gray-200 italic whitespace-pre-wrap text-sm">
+            {note || 'Користувач ще не додав заметку.'}
+        </p>
     </div>
 );
+
+
+const InfoRow: React.FC<{ icon: React.FC<{ className?: string }>, label: string, value?: string | string[] }> = ({ icon: Icon, label, value }) => {
+    const displayValue = Array.isArray(value) ? value.join(', ') : value;
+
+    if (!displayValue) return null;
+
+    return (
+        <div className="flex items-start space-x-4 py-4 first:pt-3 last:pb-3">
+            <Icon className="w-5 h-5 text-purple-500 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 break-words">
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-0.5 uppercase tracking-wider">{label}</h4>
+                <p className="text-gray-800 dark:text-white whitespace-pre-wrap">{displayValue}</p>
+            </div>
+        </div>
+    );
+};
+
 
 export default ProfilePage;
