@@ -24,6 +24,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const displaySize = maxFileSizeMB < 1 ? `${Math.round(maxFileSizeMB * 1000)}КБ` : `${maxFileSizeMB}МБ`;
+
     const onCropCompleteCallback = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
         setCroppedAreaPixels(croppedAreaPixels);
     }, []);
@@ -32,8 +34,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
         if (e.target.files && e.target.files.length > 0) {
             const file = e.target.files[0];
             
-            if (file.size > maxFileSizeMB * 1024 * 1024) { // 5MB limit
-                setError(`Файл занадто великий. Максимальний розмір ${maxFileSizeMB}MB.`);
+            if (file.size > maxFileSizeMB * 1024 * 1024) {
+                setError(`Файл занадто великий. Максимальний розмір ${displaySize}.`);
                 return;
             }
             if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
@@ -67,7 +69,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
                 
                 {!imageSrc ? (
                     <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-10">
-                        <p className="mb-4 text-center text-gray-500 dark:text-gray-400">Оберіть файл до {maxFileSizeMB}MB (JPG, PNG)</p>
+                        <p className="mb-4 text-center text-gray-500 dark:text-gray-400">Оберіть файл до {displaySize} (JPG, PNG)</p>
                         <input
                             type="file"
                             id="file-upload"

@@ -48,11 +48,34 @@ BEGIN
     END IF;
 END $$;
 
--- Додавання колонки profileBgUrl, якщо вона не існує
+-- Оновлення колонок для фону картки.
+-- Цей блок виправляє імена колонок на camelCase, щоб відповідати коду застосунку.
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profileBgUrl') THEN
-        ALTER TABLE public.profiles ADD COLUMN "profileBgUrl" text NULL;
+    -- Видаляємо стару колонку, якщо вона існує
+    IF EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profileBgUrl') THEN
+        ALTER TABLE public.profiles DROP COLUMN "profileBgUrl";
+    END IF;
+    
+    -- Видаляємо неправильно іменовані колонки (snake_case), якщо вони були створені помилково
+    IF EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profile_bg_color') THEN
+        ALTER TABLE public.profiles DROP COLUMN profile_bg_color;
+    END IF;
+    IF EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profile_bg_emoji') THEN
+        ALTER TABLE public.profiles DROP COLUMN profile_bg_emoji;
+    END IF;
+
+    -- Додаємо/перевіряємо нові колонки з правильними іменами (quoted camelCase)
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profileBgColor') THEN
+        ALTER TABLE public.profiles ADD COLUMN "profileBgColor" text DEFAULT 'linear-gradient(to top right, #6366f1, #64748b)';
+    ELSE
+        -- Також оновлюємо існуючі суцільні кольори за замовчуванням на новий градієнт
+        ALTER TABLE public.profiles ALTER COLUMN "profileBgColor" SET DEFAULT 'linear-gradient(to top right, #6366f1, #64748b)';
+        UPDATE public.profiles SET "profileBgColor" = 'linear-gradient(to top right, #6366f1, #64748b)' WHERE "profileBgColor" = '#6366f1';
+    END IF;
+    
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profileBgEmoji') THEN
+        ALTER TABLE public.profiles ADD COLUMN "profileBgEmoji" text NULL;
     END IF;
 END $$;
 
@@ -227,5 +250,53 @@ end;
 $$;
 
 
--- ### КІНЕЦЬ СКРИПТУ ###
+-- 7. НАЛАШТУВАННЯ SUPABASE STORAGE (ОБОВ'ЯЗКОВО)
+-- Щоб завантаження аватарів та фонів профілю працювало,
+-- потрібно налаштувати Storage.
+
+-- КРОК 1: Створення "Кошика" (Bucket)
+--    - Перейдіть до розділу "Storage" у вашому проєкті Supabase.
+--    - Натисніть "Create a new bucket".
+--    - Назвіть кошик: `profile-media`
+--    - Увімкніть опцію "Public bucket", щоб файли були доступні за посиланням.
+
+-- КРОК 2: Налаштування Політик Безпеки (Policies)
+--    - Перейдіть до "SQL Editor" та виконайте наступні SQL-команди.
+--    - Вони нададуть потрібні права доступу до щойно створеного кошика.
+
+-- Видаляємо старі/потенційно конфліктуючі політики для чистого встановлення
+DROP POLICY IF EXISTS "Public read access for profile media" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload media" ON storage.objects;
+DROP POLICY IF EXISTS "Users can manage their own media" ON storage.objects;
+DROP POLICY IF EXISTS "Users can update their own media" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete their own media" ON storage.objects;
+
+-- Дозволити публічний доступ на читання файлів
+CREATE POLICY "Public read access for profile media"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'profile-media' );
+
+-- Дозволити авторизованим користувачам завантажувати файли.
+-- `owner` автоматично встановлюється як uid користувача, який завантажує файл.
+-- Ця політика гарантує, що користувач не може завантажити файл від імені іншого.
+CREATE POLICY "Authenticated users can upload media"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK ( bucket_id = 'profile-media' AND auth.uid() = owner );
+
+-- Дозволити користувачам оновлювати ТІЛЬКИ СВОЇ файли
+CREATE POLICY "Users can update their own media"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING ( auth.uid() = owner )
+WITH CHECK ( auth.uid() = owner );
+
+-- Дозволити користувачам видаляти ТІЛЬКИ СВОЇ файли
+CREATE POLICY "Users can delete their own media"
+ON storage.objects FOR DELETE
+TO authenticated
+USING ( auth.uid() = owner );
+
+
+-- ### КІНЕЦЬ НАЛАШТУВАННЯ STORAGE ###
 -- Налаштування завершено!

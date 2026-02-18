@@ -15,6 +15,7 @@ import { Session, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import CompleteProfile from './components/CompleteProfile';
 import ShopPage from './components/ShopPage';
 import TopUpPage from './components/TopUpPage';
+import FakePaymentPage from './components/FakePaymentPage';
 
 type View = 
     | { name: 'rating' }
@@ -26,10 +27,30 @@ type View =
     | { name: 'chat'; withUser: User }
     | { name: 'info' }
     | { name: 'topup' }
+    | { name: 'payment'; amount: number }
     | { name: 'shop'; forUser?: User };
 
 // Dummy domain for creating technical emails from logins
 const DUMMY_DOMAIN = 'topper.app';
+
+// Helper to convert base64 data URL to a Blob for uploading
+function dataURLtoBlob(dataurl: string): Blob | null {
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+    
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+}
+
 
 const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -305,20 +326,53 @@ const App: React.FC = () => {
 
     const handleUpdateProfile = async (updatedData: Partial<User>) => {
         if (!currentUser) return;
-        const { error, data } = await supabase
-            .from('profiles')
-            .update(updatedData)
-            .eq('id', currentUser.id)
-            .select()
-            .single();
 
-        if (error) {
+        const dataToUpdate = { ...updatedData };
+
+        try {
+            // Helper to upload a base64 image and get its public URL
+            const uploadImage = async (dataUrl: string, folder: 'avatars' | 'backgrounds'): Promise<string> => {
+                const blob = dataURLtoBlob(dataUrl);
+                if (!blob) throw new Error('Недійсний формат зображення.');
+
+                const filePath = `${folder}/${currentUser.id}-${Date.now()}.jpeg`;
+                const { data, error: uploadError } = await supabase.storage
+                    .from('profile-media')
+                    .upload(filePath, blob, { upsert: false, contentType: 'image/jpeg' });
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage.from('profile-media').getPublicUrl(data.path);
+                return publicUrl;
+            };
+
+            // Check if avatar is being updated with a new base64 image
+            if (dataToUpdate.avatarUrl && dataToUpdate.avatarUrl.startsWith('data:image')) {
+                dataToUpdate.avatarUrl = await uploadImage(dataToUpdate.avatarUrl, 'avatars');
+            }
+
+            // Update profile only if there's something to update
+            if (Object.keys(dataToUpdate).length > 0) {
+                const { error, data } = await supabase
+                    .from('profiles')
+                    .update(dataToUpdate)
+                    .eq('id', currentUser.id)
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                
+                setCurrentUser(data);
+                setUsers(prev => prev.map(u => u.id === currentUser.id ? data : u));
+            }
+        } catch (error) {
             console.error("Profile update error:", error);
-            alert("Не вдалося оновити профіль.")
-        } else {
-            setCurrentUser(data);
-            setUsers(prev => prev.map(u => u.id === currentUser.id ? data : u));
+            alert(`Не вдалося оновити профіль. Переконайтесь, що ви налаштували сховище (Storage) в Supabase. Помилка: ${(error as Error).message}`);
         }
+    };
+    
+    const handleProceedToPayment = (amount: number) => {
+        setView({ name: 'payment', amount });
     };
     
     const handleTopUp = async (amount: number): Promise<boolean> => {
@@ -338,7 +392,6 @@ const App: React.FC = () => {
             return false;
         } else {
             setCurrentUser(data);
-            alert(`Баланс успішно поповнено на ${amount} грн!`);
             return true;
         }
     };
@@ -381,7 +434,14 @@ const App: React.FC = () => {
             case 'shop':
                 return <ShopPage currentUser={currentUser} targetUser={view.forUser} onSendGift={handleSendGift} onBack={() => view.forUser ? setView({ name: 'profile', user: view.forUser }) : setView({ name: 'menu' })} />;
             case 'topup':
-                return <TopUpPage currentUser={currentUser} onTopUp={handleTopUp} onBack={() => setView({ name: 'menu' })} />;
+                return <TopUpPage currentUser={currentUser} onProceedToPayment={handleProceedToPayment} onBack={() => setView({ name: 'menu' })} />;
+            case 'payment':
+                return <FakePaymentPage 
+                            amount={view.amount} 
+                            onPaymentSuccess={handleTopUp} 
+                            onCancel={() => setView({ name: 'topup' })}
+                            onPaymentComplete={() => setView({ name: 'menu' })}
+                        />;
             case 'info':
                  return <div className="text-center p-10 text-gray-500 dark:text-gray-400">{'info'} в розробці. <button onClick={() => setView({name: 'menu'})} className="text-purple-500">Назад</button></div>;
             default:
@@ -403,7 +463,7 @@ const App: React.FC = () => {
     }
 
     return (
-        <div className="h-full grid grid-rows-[auto_1fr] font-sans">
+        <div className="h-full grid grid-rows-[auto_1fr]">
             <Header currentUser={currentUser} />
             <main className="overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20">
                 {renderContent()}

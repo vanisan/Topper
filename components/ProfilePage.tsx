@@ -30,6 +30,13 @@ interface ProfilePageProps {
 const HOBBY_OPTIONS = ["Спорт", "Музика", "Мистецтво", "Ігри", "Подорожі", "Читання", "Кулінарія", "Кіно", "Технології", "Мода"];
 const RELATIONSHIP_OPTIONS = ["Неодружений/Незаміжня", "У стосунках", "Одружений/Заміжня", "Все складно"];
 
+const formatRating = (num: number): string => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'к';
+    }
+    return num.toString();
+};
+
 const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, onUpdateProfile, onBack, onLike, onGift, onSendMessage }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [isUploaderOpen, setIsUploaderOpen] = useState(false);
@@ -153,7 +160,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
             <div className="mt-4">
                  <div className="flex justify-between items-center mb-1 text-sm">
                     <span className="font-bold text-purple-500 dark:text-purple-300">Рейтинг</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{rating}</span>
+                    <span className="font-bold text-gray-900 dark:text-white">{formatRating(rating)}</span>
                  </div>
                  <RatingBar rating={rating} />
             </div>

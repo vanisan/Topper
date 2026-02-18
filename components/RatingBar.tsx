@@ -1,32 +1,52 @@
 
 import React from 'react';
 
+// Keyframes for the shimmer animation (Stage 3)
+const animationKeyframes = `
+  @keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+  }
+`;
+
+const formatRating = (num: number): string => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'к';
+    }
+    return num.toString();
+};
+
+
 interface RatingBarProps {
     rating: number;
 }
 
 const RatingBar: React.FC<RatingBarProps> = ({ rating }) => {
     let barStyle: React.CSSProperties = {};
-    let containerStyle: React.CSSProperties = {};
-    const textValue = rating;
+    const textValue = formatRating(rating);
 
-    // Stage 1: 0-100 -> Fills up with a blue gradient
+    // Stage 1: 0-100 -> Fills up, transitioning from white/light blue to dark blue
     if (rating <= 100) {
-        const percentage = Math.max(0, rating); // Ensure it's not negative
+        const progress = rating / 100;
+        // Interpolate HSL values for a smooth color transition
+        // Lightness: from 95% (almost white) down to 40% (deep blue)
+        const lightness = 95 - 55 * progress;
+        // Saturation: from 30% (pale) up to 90% (vibrant)
+        const saturation = 30 + 60 * progress;
+        
         barStyle = {
-            width: `${percentage}%`,
-            // Darkening blue gradient
-            background: 'linear-gradient(to bottom, #3b82f6, #1e40af)', 
+            width: `${rating}%`,
+            background: `hsl(220, ${saturation}%, ${lightness}%)`, 
             transition: 'width 0.5s ease-out, background 0.5s ease-out',
         };
     } 
-    // Stage 2: 101-200 -> Bar is full, transitions to gold
+    // Stage 2: 101-200 -> Bar is full, transitions from pale to rich gold
     else if (rating <= 200) {
         const goldProgress = (rating - 100) / 100; // From 0.0 to 1.0
         
         // Interpolate HSL lightness for a smooth transition from pale to rich gold
-        const startLightness = 85 - (25 * goldProgress); // from 85% (pale) to 60%
-        const endLightness = 75 - (25 * goldProgress);   // from 75% to 50% (rich)
+        const startLightness = 90 - (30 * goldProgress); // from 90% (pale) to 60%
+        const endLightness = 80 - (30 * goldProgress);   // from 80% to 50% (rich)
 
         barStyle = {
             width: '100%',
@@ -34,44 +54,38 @@ const RatingBar: React.FC<RatingBarProps> = ({ rating }) => {
             transition: 'background 0.5s ease-in-out',
         };
     } 
-    // Stage 3: 201+ -> Bar is gold, red glowing frame appears and intensifies
+    // Stage 3: 201+ -> Bar is full gold and shimmers with red, animation speeds up with rating
     else {
+        const speedSteps = Math.floor((rating - 201) / 50);
+        const duration = Math.max(0.8, 4 - speedSteps * 0.6); // Starts at 4s, gets faster, caps at 0.8s
+
         barStyle = {
             width: '100%',
-            // Full, rich gold
-            background: 'linear-gradient(to bottom, hsl(48, 95%, 60%), hsl(48, 95%, 50%))',
-        };
-
-        const glowRating = rating - 200;
-        const glowSteps = Math.floor(glowRating / 150);
-        
-        const blur = 5 + glowSteps * 3;
-        const spread = 2 + glowSteps * 2;
-        // Opacity starts low and increases, capped at 1
-        const opacity = Math.min(0.4 + glowSteps * 0.15, 1);
-
-        containerStyle = {
-             boxShadow: `0 0 ${blur}px ${spread}px rgba(255, 20, 20, ${opacity})`,
-             transition: 'box-shadow 0.5s ease-in-out',
+            // A wide gradient that will be animated
+            background: 'linear-gradient(110deg, #fde047, #fca5a5, #dc2626, #fca5a5, #fde047)',
+            backgroundSize: '400% 100%',
+            animation: `shimmer ${duration}s linear infinite`,
         };
     }
 
     return (
-        <div 
-            className="w-full bg-gray-300 dark:bg-gray-700 rounded-sm h-5 border-b border-gray-400 dark:border-gray-900 relative"
-            style={containerStyle}
-        >
-            <div
-                className="h-full rounded-sm flex items-center justify-end"
-                style={barStyle}
+        <>
+            <style>{animationKeyframes}</style>
+            <div 
+                className="w-full bg-gray-300 dark:bg-gray-700 rounded-sm h-5 border-b border-gray-400 dark:border-gray-900 relative"
             >
-                {rating >= 10 && (
-                     <span className="px-2 text-white text-xs font-bold [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]">
-                        {textValue}
-                    </span>
-                )}
+                <div
+                    className="h-full rounded-sm flex items-center justify-end"
+                    style={barStyle}
+                >
+                    {rating >= 10 && (
+                         <span className="px-2 text-white text-xs font-bold [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]">
+                            {textValue}
+                        </span>
+                    )}
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 

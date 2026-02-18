@@ -35,5 +35,6 @@ export interface User {
   aboutMe?: string;
   relationshipStatus?: string;
   note?: string;
-  profileBgUrl?: string;
+  profileBgColor?: string;
+  profileBgEmoji?: string;
 }

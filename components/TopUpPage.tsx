@@ -5,14 +5,13 @@ import ArrowLeftIcon from './icons/ArrowLeftIcon';
 
 interface TopUpPageProps {
     currentUser: User;
-    onTopUp: (amount: number) => Promise<boolean>;
+    onProceedToPayment: (amount: number) => void;
     onBack: () => void;
 }
 
-const TopUpPage: React.FC<TopUpPageProps> = ({ currentUser, onTopUp, onBack }) => {
+const TopUpPage: React.FC<TopUpPageProps> = ({ currentUser, onProceedToPayment, onBack }) => {
     const [amount, setAmount] = useState<string>('100');
     const [error, setError] = useState<string>('');
-    const [isLoading, setIsLoading] = useState(false);
 
     const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setError('');
@@ -33,12 +32,7 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ currentUser, onTopUp, onBack }) =
         }
         
         setError('');
-        setIsLoading(true);
-        const success = await onTopUp(numericAmount);
-        setIsLoading(false);
-        if (success) {
-            setAmount('100'); // Reset on success
-        }
+        onProceedToPayment(numericAmount);
     };
 
     return (
@@ -76,10 +70,9 @@ const TopUpPage: React.FC<TopUpPageProps> = ({ currentUser, onTopUp, onBack }) =
                 </div>
                 <button
                     type="submit"
-                    disabled={isLoading}
                     className="w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 transition-colors shadow-lg disabled:bg-gray-400 dark:disabled:bg-gray-500"
                 >
-                    {isLoading ? 'Обробка...' : 'Поповнити'}
+                    Перейти до оплати
                 </button>
             </form>
         </div>

@@ -6,7 +6,19 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Topper Social Network</title>
+    <link href="https://fonts.cdnfonts.com/css/sn-pro" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['SN Pro', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
   <script type="importmap">
 {
   "imports": {
@@ -19,7 +31,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 h-screen">
+  <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-300 h-screen font-sans">
     <div id="root" class="h-full"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

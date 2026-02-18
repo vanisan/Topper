@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { User } from '../types';
 import CrownIcon from './icons/CrownIcon';
 import HeartIcon from './icons/HeartIcon';
@@ -13,6 +13,13 @@ interface UserProfileCardProps {
     onGift: (user: User) => void;
     onViewProfile: (user: User) => void;
 }
+
+const formatRating = (num: number): string => {
+    if (num >= 1000) {
+        return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'к';
+    }
+    return num.toString();
+};
 
 const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrentUser, onLike, onGift, onViewProfile }) => {
     const rankColors: { [key: number]: string } = {
@@ -33,33 +40,82 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
             onViewProfile(user);
         }
     };
+    
+    const cardStyle = useMemo<React.CSSProperties>(() => ({
+        background: user.profileBgColor || 'linear-gradient(to top right, #4b5563, #1f2937)', // Default dark gradient
+    }), [user.profileBgColor]);
+    
+    const patternStyle = useMemo<React.CSSProperties | null>(() => {
+        if (!user.profileBgEmoji) return null;
+        
+        try {
+            // Creates a very dense, staggered pattern similar to the user's request.
+            // The pattern tile is smaller (32x32) for higher density.
+            const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'>
+                            <defs>
+                                <pattern id='p' width='32' height='32' patternUnits='userSpaceOnUse'>
+                                    <text x='16' y='8' dominant-baseline='middle' text-anchor='middle' font-size='20'>${user.profileBgEmoji}</text>
+                                    <text x='0' y='24' dominant-baseline='middle' text-anchor='middle' font-size='20'>${user.profileBgEmoji}</text>
+                                </pattern>
+                            </defs>
+                            <rect width='100%' height='100%' fill='url(#p)'/>
+                        </svg>`;
+
+            const patternUrl = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+
+            return {
+                backgroundImage: patternUrl,
+            };
+        } catch (error) {
+            console.error("Error creating emoji pattern:", error);
+            return null; // Return null if emoji is invalid
+        }
+    }, [user.profileBgEmoji]);
 
     return (
         <div 
             onClick={handleCardClick}
-            className={`group relative p-4 rounded-xl shadow-lg border-2 ${cardBorder} transition-all duration-300 overflow-hidden bg-gray-200 dark:bg-gray-800 ${!isCurrentUser ? 'cursor-pointer' : ''}`}
-            style={user.profileBgUrl ? { backgroundImage: `url(${user.profileBgUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+            className={`group relative p-4 rounded-xl shadow-lg border-2 ${cardBorder} transition-all duration-300 overflow-hidden ${!isCurrentUser ? 'cursor-pointer' : ''}`}
+            style={cardStyle}
             role={!isCurrentUser ? "button" : undefined}
             tabIndex={!isCurrentUser ? 0 : -1}
             onKeyDown={(e) => { if (e.key === 'Enter' && !isCurrentUser) onViewProfile(user) }}
         >
-            <div className={`absolute inset-0 bg-white/95 dark:bg-gray-800/95 transition-colors duration-300 ${!isCurrentUser ? 'group-hover:bg-white/90 dark:group-hover:bg-gray-700/90' : ''}`}></div>
+            {patternStyle && <div className="absolute inset-0 opacity-40" style={patternStyle}></div>}
+            
+            <div className={`absolute inset-0 bg-white/60 dark:bg-gray-800/60 transition-colors duration-300 ${!isCurrentUser ? 'group-hover:bg-white/50 dark:group-hover:bg-gray-700/50' : ''}`}></div>
 
             <div className="relative z-10 flex items-center space-x-4">
                 <div className={`text-2xl font-bold w-10 text-center ${textColor}`}>
                     {rank}
                 </div>
                 <img src={user.avatarUrl} alt={user.name} className="w-16 h-16 rounded-full border-2 border-gray-300 dark:border-gray-600" />
-                <div className="flex-grow">
+                <div className="flex-grow overflow-hidden">
                     <div className="flex items-center space-x-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white dark:[text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">{user.name}</h3>
-                        {isCurrentUser && <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full">Ви</span>}
+                        <h3 className="text-lg font-bold text-black dark:text-white truncate">{user.name}</h3>
+                        {isCurrentUser && <span className="text-xs bg-purple-600 text-white px-2 py-0.5 rounded-full flex-shrink-0">Ви</span>}
                     </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{user.location}</p>
-                    <p className="text-xl font-bold text-purple-500 dark:text-purple-400 mt-1">{user.rating} pts</p>
+                    <p className="text-sm font-bold text-black dark:text-white truncate">{user.location}</p>
+                    <p className="text-xl font-bold text-black dark:text-white mt-1">{formatRating(user.rating)} ⭐</p>
+
+                    {user.giftsReceived && user.giftsReceived.length > 0 && (
+                        <div className="mt-2 flex items-center space-x-1" aria-label="Останні подарунки">
+                            {[...user.giftsReceived].reverse().slice(0, 5).map((gift, index) => (
+                                <span key={`${gift.id}-${index}`} title={gift.name} className="text-lg transition-transform hover:scale-125 cursor-default">
+                                    {gift.icon}
+                                </span>
+                            ))}
+                            {user.giftsReceived.length > 5 && (
+                                <span className="text-xs font-bold text-black dark:text-white ml-1">
+                                    +{user.giftsReceived.length - 5}
+                                </span>
+                            )}
+                        </div>
+                    )}
+
                 </div>
                 {!isCurrentUser && (
-                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 z-20">
+                    <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 z-20 flex-shrink-0">
                         <button
                             onClick={() => onLike(user.id)}
                             className="p-2 rounded-full bg-pink-600 hover:bg-pink-500 transition-colors text-white"

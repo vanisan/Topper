@@ -3,6 +3,9 @@ import React, { useState } from 'react';
 import { User } from '../types';
 import { ukrainianCities } from '../data/cities';
 import ImageUploader from './ImageUploader';
+import PhotographIcon from './icons/PhotographIcon';
+import { GRADIENT_PALETTE } from '../data/gradients';
+
 
 interface CompleteProfileProps {
     user: User;
@@ -11,6 +14,8 @@ interface CompleteProfileProps {
 
 const HOBBY_OPTIONS = ["Спорт", "Музика", "Мистецтво", "Ігри", "Подорожі", "Читання", "Кулінарія", "Кіно", "Технології", "Мода"];
 const RELATIONSHIP_OPTIONS = ["Неодружений/Незаміжня", "У стосунках", "Одружений/Заміжня", "Все складно"];
+const EMOJI_OPTIONS = ['✨', '🚀', '❤️', '👑', '💎', '🌟', '💐', '⚙️', '🎮', '🎨'];
+
 
 const CompleteProfile: React.FC<CompleteProfileProps> = ({ user, onComplete }) => {
     const [formData, setFormData] = useState<Partial<User>>({
@@ -21,6 +26,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({ user, onComplete }) =
         hobbies: user.hobbies || [],
         aboutMe: user.aboutMe || '',
         relationshipStatus: user.relationshipStatus || '',
+        profileBgColor: user.profileBgColor || GRADIENT_PALETTE[5].gradient, // default Twilight
+        profileBgEmoji: user.profileBgEmoji || '',
     });
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +47,14 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({ user, onComplete }) =
         } else {
             alert('Можна обрати не більше 5 хобі.');
         }
+    };
+    
+    const handleColorSelect = (color: string) => {
+        setFormData(prev => ({ ...prev, profileBgColor: color }));
+    };
+
+    const handleEmojiSelect = (emoji: string) => {
+        setFormData(prev => ({ ...prev, profileBgEmoji: emoji }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -103,6 +118,51 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({ user, onComplete }) =
                             <option value="">Сімейний стан</option>
                             {RELATIONSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
+
+                        <div className="bg-gray-100 dark:bg-gray-700/50 p-4 rounded-lg space-y-3">
+                             <div className="flex items-center space-x-3">
+                                <PhotographIcon className="w-6 h-6 text-purple-500 dark:text-purple-400" />
+                                <span className="font-medium text-gray-900 dark:text-white">Оформлення картки</span>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Колір фону</label>
+                                <div className="flex flex-wrap gap-3 mt-2">
+                                    {GRADIENT_PALETTE.map(gradient => (
+                                        <button
+                                            type="button"
+                                            key={gradient.name}
+                                            onClick={() => handleColorSelect(gradient.gradient)}
+                                            className={`w-8 h-8 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800 ${formData.profileBgColor === gradient.gradient ? 'ring-2 ring-offset-2 ring-purple-600 dark:ring-offset-gray-700' : ''}`}
+                                            style={{ background: gradient.gradient }}
+                                            aria-label={`Select color ${gradient.name}`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Емодзі-візерунок</label>
+                                <div className="flex flex-wrap gap-3 mt-2">
+                                    {EMOJI_OPTIONS.map(emoji => (
+                                        <button
+                                            type="button"
+                                            key={emoji}
+                                            onClick={() => handleEmojiSelect(emoji)}
+                                            className={`w-10 h-10 rounded-lg text-2xl flex items-center justify-center transition-all hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800 ${formData.profileBgEmoji === emoji ? 'bg-purple-600 ring-2 ring-offset-2 ring-purple-600 dark:ring-offset-gray-700' : 'bg-gray-200 dark:bg-gray-700'}`}
+                                            aria-label={`Select emoji ${emoji}`}
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleEmojiSelect('')}
+                                        className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all text-sm font-bold hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800 ${!formData.profileBgEmoji ? 'bg-purple-600 ring-2 ring-offset-2 ring-purple-600 dark:ring-offset-gray-700 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500'}`}
+                                    >
+                                        OFF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div className="pt-4">
                              <button type="submit" disabled={isLoading} className="w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 transition-colors shadow-lg disabled:bg-gray-400">

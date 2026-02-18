@@ -1,7 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { User } from '../types';
 import UserProfileCard from './UserProfileCard';
+import SearchIcon from './icons/SearchIcon';
 
 interface LeaderboardProps {
     users: User[];
@@ -15,10 +16,22 @@ type Tab = 'local' | 'global';
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ users, currentUser, onLike, onGift, onViewProfile }) => {
     const [activeTab, setActiveTab] = useState<Tab>('local');
-    
-    const usersToDisplay = activeTab === 'local'
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const usersToDisplay = useMemo(() => activeTab === 'local'
         ? users.filter(u => u.location === currentUser.location)
-        : users;
+        : users, [activeTab, users, currentUser.location]);
+        
+    const filteredUsers = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return usersToDisplay;
+        }
+        const lowercasedQuery = searchQuery.toLowerCase();
+        return usersToDisplay.filter(user =>
+            user.name.toLowerCase().includes(lowercasedQuery) ||
+            (user.location && user.location.toLowerCase().includes(lowercasedQuery))
+        );
+    }, [searchQuery, usersToDisplay]);
 
     const getTabClass = (tabName: Tab) => {
         return activeTab === tabName
@@ -31,6 +44,19 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ users, currentUser, onLike, o
             <h2 className="text-3xl font-bold mb-4 text-center text-purple-600 dark:text-purple-300">
                  {activeTab === 'local' ? `Топ у місті ${currentUser.location}` : 'Топ по Україні'}
             </h2>
+
+            <div className="mb-6 relative">
+                <input
+                    type="text"
+                    placeholder="Пошук за ім'ям або містом..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full p-3 pl-10 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none transition-colors"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                    <SearchIcon className="w-5 h-5" />
+                </div>
+            </div>
 
             <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex justify-center space-x-6" aria-label="Tabs">
@@ -50,17 +76,23 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ users, currentUser, onLike, o
             </div>
             
             <div className="space-y-4">
-                {usersToDisplay.map((user, index) => (
-                    <UserProfileCard
-                        key={user.id}
-                        user={user}
-                        rank={index + 1}
-                        isCurrentUser={user.id === currentUser.id}
-                        onLike={onLike}
-                        onGift={onGift}
-                        onViewProfile={onViewProfile}
-                    />
-                ))}
+                {filteredUsers.length > 0 ? (
+                    filteredUsers.map((user) => (
+                        <UserProfileCard
+                            key={user.id}
+                            user={user}
+                            rank={users.findIndex(u => u.id === user.id) + 1}
+                            isCurrentUser={user.id === currentUser.id}
+                            onLike={onLike}
+                            onGift={onGift}
+                            onViewProfile={onViewProfile}
+                        />
+                    ))
+                ) : (
+                     <p className="text-center text-gray-500 dark:text-gray-400 py-10">
+                        Користувачів не знайдено.
+                    </p>
+                )}
             </div>
         </div>
     );
