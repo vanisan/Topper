@@ -13,17 +13,17 @@ const RankSpecifics = {
     1: {
         borderColor: 'border-amber-400',
         shadowColor: 'shadow-amber-500/40',
-        textColor: 'text-amber-400',
+        textColor: 'text-amber-700 dark:text-amber-400',
     },
     2: {
         borderColor: 'border-slate-300',
         shadowColor: 'shadow-slate-400/40',
-        textColor: 'text-slate-300',
+        textColor: 'text-slate-600 dark:text-slate-300',
     },
     3: {
         borderColor: 'border-orange-500',
         shadowColor: 'shadow-orange-500/40',
-        textColor: 'text-orange-500',
+        textColor: 'text-orange-700 dark:text-orange-500',
     },
 };
 
@@ -39,14 +39,16 @@ const TopUserSpot: React.FC<{ user: User; rank: 1 | 2 | 3; onViewProfile: (user:
         <div className="flex flex-col items-center justify-start transition-transform duration-300 hover:scale-110">
             <button
                 onClick={() => onViewProfile(user)}
-                className={`rounded-full flex flex-col items-center justify-center p-2 bg-gray-700/50 backdrop-blur-sm
+                className={`rounded-full flex flex-col items-center justify-center p-2 bg-gray-100/80 dark:bg-gray-700/50 backdrop-blur-sm
                     border-4 ${specifics.borderColor} shadow-2xl ${specifics.shadowColor} ${containerSize}`}
             >
-                <img src={user.avatarUrl} alt={user.name} className={`rounded-full object-cover border-2 border-white/20 ${avatarSize}`} />
+                <img src={user.avatarUrl} alt={user.name} className={`rounded-full object-cover border-2 border-gray-300 dark:border-white/20 ${avatarSize}`} />
             </button>
-            <h3 className="mt-3 font-bold text-lg text-white text-center break-words w-full [text-shadow:0_1px_2px_rgba(0,0,0,0.7)]">{user.name}</h3>
-            <p className={`font-semibold ${specifics.textColor}`}>#{rank} місце</p>
-            <div className="mt-1 text-xs bg-green-500/30 text-green-200 font-semibold px-2 py-1 rounded-full [text-shadow:-1px_-1px_0_#000,_1px_-1px_0_#000,_-1px_1px_0_#000,_1px_1px_0_#000]">
+            <h3 className="mt-3 font-bold text-lg text-gray-900 dark:text-white text-center break-words w-full px-2">
+                {user.name}
+            </h3>
+            <p className={`font-extrabold ${specifics.textColor}`}>#{rank} місце</p>
+            <div className="mt-1 text-[10px] sm:text-xs bg-green-600 dark:bg-green-500/30 text-white dark:text-green-200 font-bold px-2 py-1 rounded-full shadow-sm">
                 +2 бали / 24 год
             </div>
         </div>
@@ -56,11 +58,11 @@ const TopUserSpot: React.FC<{ user: User; rank: 1 | 2 | 3; onViewProfile: (user:
 
 const HomePage: React.FC<HomePageProps> = ({ city, topUsers, onViewProfile }) => {
     return (
-        <div className="flex flex-col items-center justify-center h-full p-4 text-white">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500 mb-2 [text-shadow:0_2px_4px_rgba(0,0,0,0.3)]">
+        <div className="flex flex-col items-center justify-center h-full p-4">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-500 mb-2 drop-shadow-sm text-center">
                 {city}
             </h1>
-            <p className="text-gray-400 mb-10 md:mb-16 max-w-md text-center">Топ-3 користувачі вашого міста отримують по +2 рейтинга за добу, поспішай стати першими!</p>
+            <p className="text-gray-600 dark:text-gray-400 mb-10 md:mb-16 max-w-md text-center font-medium">Топ-3 користувачі вашого міста отримують по +2 рейтинга за добу, поспішай стати першими!</p>
             
             {topUsers.length > 0 ? (
                 <div className="w-full max-w-md flex flex-col items-center">
@@ -89,8 +91,8 @@ const HomePage: React.FC<HomePageProps> = ({ city, topUsers, onViewProfile }) =>
                     )}
                 </div>
             ) : (
-                <div className="text-center text-gray-500 mt-8">
-                    <p>У вашому місті поки немає лідерів.</p>
+                <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
+                    <p className="font-semibold">У вашому місті поки немає лідерів.</p>
                     <p>Будьте першим!</p>
                 </div>
             )}

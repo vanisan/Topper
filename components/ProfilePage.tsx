@@ -75,32 +75,32 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 
     if (isEditing && isCurrentUser) {
         return (
-            <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
-                 <h2 className="text-2xl font-bold text-center text-purple-600 dark:text-purple-300">Редагувати профіль</h2>
+            <div className="bg-white/90 dark:bg-gray-800/80 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
+                 <h2 className="text-2xl font-bold text-center text-purple-700 dark:text-purple-300">Редагувати профіль</h2>
                  
                  <div className="space-y-2">
-                    <label htmlFor="note-input" className="font-semibold text-gray-700 dark:text-gray-300">Заметка (до 200 символів)</label>
+                    <label htmlFor="note-input" className="font-bold text-gray-800 dark:text-gray-200">Заметка (до 200 символів)</label>
                     <div className="relative">
-                        <textarea id="note-input" name="note" placeholder="Ваш статус, оголошення або цитата..." value={formData.note} onChange={handleInputChange} rows={3} maxLength={200} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none pr-16"></textarea>
-                        <span className="absolute bottom-2 right-3 text-xs text-gray-400 dark:text-gray-500">
+                        <textarea id="note-input" name="note" placeholder="Ваш статус, оголошення або цитата..." value={formData.note} onChange={handleInputChange} rows={3} maxLength={200} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none pr-16 text-gray-900 dark:text-white"></textarea>
+                        <span className="absolute bottom-2 right-3 text-xs text-gray-500 dark:text-gray-400">
                             {formData.note?.length || 0} / 200
                         </span>
                     </div>
                 </div>
 
                  <div className="space-y-2">
-                    <label className="font-semibold text-gray-700 dark:text-gray-300">Місто</label>
-                    <select name="location" value={formData.location} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none">
+                    <label className="font-bold text-gray-800 dark:text-gray-200">Місто</label>
+                    <select name="location" value={formData.location} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none text-gray-900 dark:text-white font-medium">
                         <option value="">Не вказано</option>
                         {ukrainianCities.map(city => <option key={city} value={city}>{city}</option>)}
                     </select>
                  </div>
                  
                  <div>
-                    <label className="font-semibold text-gray-700 dark:text-gray-300 mb-2 block">Хобі (до 5)</label>
+                    <label className="font-bold text-gray-800 dark:text-gray-200 mb-2 block">Хобі (до 5)</label>
                     <div className="flex flex-wrap gap-2">
                         {HOBBY_OPTIONS.map(hobby => (
-                            <button key={hobby} onClick={() => handleHobbyToggle(hobby)} className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${formData.hobbies?.includes(hobby) ? 'bg-purple-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'}`}>
+                            <button key={hobby} onClick={() => handleHobbyToggle(hobby)} className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${formData.hobbies?.includes(hobby) ? 'bg-purple-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}>
                                 {hobby}
                             </button>
                         ))}
@@ -108,13 +108,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                  </div>
 
                  <div className="space-y-2">
-                     <label className="font-semibold text-gray-700 dark:text-gray-300">Про себе</label>
-                     <textarea name="aboutMe" placeholder="Розкажіть про себе..." value={formData.aboutMe} onChange={handleInputChange} rows={4} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none"></textarea>
+                     <label className="font-bold text-gray-800 dark:text-gray-200">Про себе</label>
+                     <textarea name="aboutMe" placeholder="Розкажіть про себе..." value={formData.aboutMe} onChange={handleInputChange} rows={4} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none text-gray-900 dark:text-white"></textarea>
                  </div>
                  
                  <div className="space-y-2">
-                     <label className="font-semibold text-gray-700 dark:text-gray-300">Сімейний стан</label>
-                     <select name="relationshipStatus" value={formData.relationshipStatus} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none">
+                     <label className="font-bold text-gray-800 dark:text-gray-200">Сімейний стан</label>
+                     <select name="relationshipStatus" value={formData.relationshipStatus} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none text-gray-900 dark:text-white font-medium">
                         <option value="">Не вказано</option>
                         {RELATIONSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
@@ -122,7 +122,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 
                  <div className="flex justify-end space-x-4 mt-6">
                     <button onClick={() => setIsEditing(false)} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">Скасувати</button>
-                    <button onClick={handleSave} className="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors">Зберегти</button>
+                    <button onClick={handleSave} className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors">Зберегти</button>
                  </div>
             </div>
         );
@@ -139,28 +139,28 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                 }}
             />
         )}
-        <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl relative">
+        <div className="bg-white/90 dark:bg-gray-800/80 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl relative">
             {onBack && (
                  <button onClick={onBack} className="absolute top-4 left-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700/50 z-10">
-                    <ArrowLeftIcon className="w-6 h-6 text-gray-800 dark:text-white" />
+                    <ArrowLeftIcon className="w-6 h-6 text-gray-900 dark:text-white" />
                 </button>
             )}
             <div className="text-center pt-8">
                 <div className="relative w-24 h-24 mx-auto">
-                    <img src={user.avatarUrl} alt={user.name} className="w-24 h-24 rounded-full object-cover border-4 border-purple-500" />
+                    <img src={user.avatarUrl} alt={user.name} className="w-24 h-24 rounded-full object-cover border-4 border-purple-500 shadow-md" />
                      {isCurrentUser && (
-                        <button onClick={() => setIsUploaderOpen(true)} className="absolute -bottom-2 -right-2 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors shadow-md">
+                        <button onClick={() => setIsUploaderOpen(true)} className="absolute -bottom-2 -right-2 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors shadow-lg">
                            <CameraIcon className="w-5 h-5"/>
                         </button>
                     )}
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-4 dark:[text-shadow:0_1px_2px_rgba(0,0,0,0.5)]">{user.name}{user.age ? `, ${user.age}` : ''}</h2>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white mt-4">{user.name}{user.age ? `, ${user.age}` : ''}</h2>
             </div>
             
             <div className="mt-4">
-                 <div className="flex justify-between items-center mb-1 text-sm">
-                    <span className="font-bold text-purple-500 dark:text-purple-300">Рейтинг</span>
-                    <span className="font-bold text-gray-900 dark:text-white">{formatRating(rating)}</span>
+                 <div className="flex justify-between items-center mb-1 text-sm font-bold">
+                    <span className="text-purple-700 dark:text-purple-300">Рейтинг</span>
+                    <span className="text-gray-900 dark:text-white">{formatRating(rating)}</span>
                  </div>
                  <RatingBar rating={rating} />
             </div>
@@ -181,21 +181,21 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                         className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors shadow-lg"
                     >
                         <PencilIcon className="w-5 h-5" />
-                        <span className="[text-shadow:0_1px_1px_rgba(0,0,0,0.3)]">Редагувати профіль</span>
+                        <span>Редагувати профіль</span>
                     </button>
                 ) : (
                     <div className="grid grid-cols-3 gap-2">
-                        <button onClick={() => onLike(user.id)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white transition-colors">
+                        <button onClick={() => onLike(user.id)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white transition-colors shadow-sm">
                             <HeartIcon className="w-6 h-6" />
-                            <span className="text-xs font-bold [text-shadow:0_1px_1px_rgba(0,0,0,0.3)]">Лайк</span>
+                            <span className="text-xs font-bold">Лайк</span>
                         </button>
-                         <button onClick={() => onGift(user)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition-colors">
+                         <button onClick={() => onGift(user)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white transition-colors shadow-sm">
                             <GiftIcon className="w-6 h-6" />
-                            <span className="text-xs font-bold [text-shadow:0_1px_1px_rgba(0,0,0,0.3)]">Подарунок</span>
+                            <span className="text-xs font-bold">Подарунок</span>
                         </button>
-                         <button onClick={() => onSendMessage(user)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-green-600 hover:bg-green-500 text-white transition-colors">
+                         <button onClick={() => onSendMessage(user)} className="flex flex-col items-center justify-center space-y-1 p-2 rounded-lg bg-green-600 hover:bg-green-500 text-white transition-colors shadow-sm">
                             <MessageIcon className="w-6 h-6" />
-                            <span className="text-xs font-bold [text-shadow:0_1px_1px_rgba(0,0,0,0.3)]">Написати</span>
+                            <span className="text-xs font-bold">Написати</span>
                         </button>
                     </div>
                 )}
@@ -206,9 +206,9 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 };
 
 const NoteBlock: React.FC<{ note?: string }> = ({ note }) => (
-    <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800/50">
-        <h4 className="font-semibold text-sm text-yellow-700 dark:text-yellow-300 mb-2">Заметка</h4>
-        <p className="text-gray-800 dark:text-gray-200 italic whitespace-pre-wrap text-sm">
+    <div className="mt-6 bg-yellow-100 dark:bg-yellow-900/30 p-4 rounded-lg border-l-4 border-yellow-400 dark:border-yellow-600 shadow-sm">
+        <h4 className="font-black text-xs text-yellow-800 dark:text-yellow-400 mb-2 uppercase tracking-wide">Заметка</h4>
+        <p className="text-gray-900 dark:text-gray-100 italic font-medium whitespace-pre-wrap text-sm leading-relaxed">
             {note || 'Користувач ще не додав заметку.'}
         </p>
     </div>
@@ -222,10 +222,10 @@ const InfoRow: React.FC<{ icon: React.FC<{ className?: string }>, label: string,
 
     return (
         <div className="flex items-start space-x-4 py-4 first:pt-3 last:pb-3">
-            <Icon className="w-5 h-5 text-purple-500 dark:text-purple-400 mt-0.5 flex-shrink-0" />
+            <Icon className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1 break-words">
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-0.5 uppercase tracking-wider">{label}</h4>
-                <p className="text-gray-800 dark:text-white whitespace-pre-wrap">{displayValue}</p>
+                <h4 className="text-[10px] font-black text-gray-600 dark:text-gray-400 mb-0.5 uppercase tracking-widest">{label}</h4>
+                <p className="text-gray-900 dark:text-white font-semibold whitespace-pre-wrap">{displayValue}</p>
             </div>
         </div>
     );
