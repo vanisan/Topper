@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { User } from '../types';
-import CrownIcon from './icons/CrownIcon';
 
 interface HomePageProps {
     city: string;
@@ -9,93 +8,106 @@ interface HomePageProps {
     onViewProfile: (user: User) => void;
 }
 
-const RankSpecifics = {
+const RankConfig = {
     1: {
+        height: 'h-40 sm:h-48',
+        avatarSize: 'w-20 h-20 sm:w-28 sm:h-28',
         borderColor: 'border-amber-400',
-        shadowColor: 'shadow-amber-500/40',
+        bgColor: 'bg-amber-50/90 dark:bg-amber-900/20',
         textColor: 'text-amber-700 dark:text-amber-400',
+        order: 'order-2',
+        label: '1 місце'
     },
     2: {
+        height: 'h-32 sm:h-40',
+        avatarSize: 'w-16 h-16 sm:w-24 sm:h-24',
         borderColor: 'border-slate-300',
-        shadowColor: 'shadow-slate-400/40',
+        bgColor: 'bg-slate-50/90 dark:bg-slate-800/30',
         textColor: 'text-slate-600 dark:text-slate-300',
+        order: 'order-1',
+        label: '2 місце'
     },
     3: {
-        borderColor: 'border-orange-500',
-        shadowColor: 'shadow-orange-500/40',
-        textColor: 'text-orange-700 dark:text-orange-500',
-    },
+        height: 'h-28 sm:h-36',
+        avatarSize: 'w-14 h-14 sm:w-20 sm:h-20',
+        borderColor: 'border-orange-400',
+        bgColor: 'bg-orange-50/90 dark:bg-orange-900/20',
+        textColor: 'text-orange-700 dark:text-orange-400',
+        order: 'order-3',
+        label: '3 місце'
+    }
 };
 
-const TopUserSpot: React.FC<{ user: User; rank: 1 | 2 | 3; onViewProfile: (user: User) => void; }> = ({ user, rank, onViewProfile }) => {
-    const specifics = RankSpecifics[rank];
-    const isTopRank = rank === 1;
-
-    // Define sizes based on rank for visual hierarchy
-    const containerSize = isTopRank ? 'w-32 h-32 md:w-36 md:h-36' : 'w-28 h-28 md:w-32 md:h-32';
-    const avatarSize = isTopRank ? 'w-20 h-20 md:w-24 md:h-24' : 'w-16 h-16 md:w-20 md:h-20';
+const PodiumSpot: React.FC<{ user: User; rank: 1 | 2 | 3; onViewProfile: (user: User) => void; }> = ({ user, rank, onViewProfile }) => {
+    const config = RankConfig[rank];
 
     return (
-        <div className="flex flex-col items-center justify-start transition-transform duration-300 hover:scale-110">
+        <div className={`flex flex-col items-center justify-end ${config.order} w-full max-w-[30%] sm:max-w-[120px]`}>
+            {/* Avatar Section */}
             <button
                 onClick={() => onViewProfile(user)}
-                className={`rounded-full flex flex-col items-center justify-center p-2 bg-gray-100/80 dark:bg-gray-700/50 backdrop-blur-sm
-                    border-4 ${specifics.borderColor} shadow-2xl ${specifics.shadowColor} ${containerSize}`}
+                className={`relative group mb-2 transition-transform duration-300 hover:scale-110`}
             >
-                <img src={user.avatarUrl} alt={user.name} className={`rounded-full object-cover border-2 border-gray-300 dark:border-white/20 ${avatarSize}`} />
+                <div className={`rounded-full border-4 ${config.borderColor} overflow-hidden ${config.avatarSize} shadow-xl`}>
+                    <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                </div>
+                {rank === 1 && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-2xl">👑</div>
+                )}
             </button>
-            <h3 className="mt-3 font-bold text-lg text-gray-900 dark:text-white text-center break-words w-full px-2">
-                {user.name}
-            </h3>
-            <p className={`font-extrabold ${specifics.textColor}`}>#{rank} місце</p>
-            <div className="mt-1 text-[10px] sm:text-xs bg-green-600 dark:bg-green-500/30 text-white dark:text-green-200 font-bold px-2 py-1 rounded-full shadow-sm">
-                +2 бали / 24 год
+
+            {/* Pedestal Section */}
+            <div className={`w-full ${config.height} ${config.bgColor} rounded-t-2xl border-x-2 border-t-2 ${config.borderColor} flex flex-col items-center p-1 sm:p-2 shadow-lg text-center`}>
+                <span className={`text-[10px] sm:text-sm font-black uppercase tracking-tighter ${config.textColor} mb-1`}>
+                    {config.label}
+                </span>
+                
+                <h3 className="text-[11px] sm:text-base font-black text-gray-900 dark:text-white leading-tight truncate w-full mb-1" title={user.name}>
+                    {user.name}
+                </h3>
+
+                <div className="mt-auto mb-2">
+                    <div className="bg-green-600 dark:bg-green-500 text-white text-[8px] sm:text-[10px] font-black px-1 sm:px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+                        +2 БАЛИ
+                    </div>
+                    <span className="block text-[7px] sm:text-[9px] text-gray-500 dark:text-gray-400 font-bold mt-0.5">
+                        ЗА 24 ГОД
+                    </span>
+                </div>
             </div>
         </div>
     );
 };
 
-
 const HomePage: React.FC<HomePageProps> = ({ city, topUsers, onViewProfile }) => {
     return (
-        <div className="flex flex-col items-center justify-center h-full p-4">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-500 mb-2 drop-shadow-sm text-center">
-                {city}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mb-10 md:mb-16 max-w-md text-center font-medium">Топ-3 користувачі вашого міста отримують по +2 рейтинга за добу, поспішай стати першими!</p>
+        <div className="flex flex-col items-center justify-start min-h-full py-4 sm:py-8">
+            <header className="text-center mb-8 px-4">
+                <h1 className="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-700 via-pink-600 to-red-500 dark:from-purple-400 dark:via-pink-400 dark:to-red-400 drop-shadow-sm">
+                    {city}
+                </h1>
+                <p className="mt-2 text-[10px] sm:text-sm font-bold text-gray-600 dark:text-gray-400 max-w-[280px] mx-auto leading-tight uppercase tracking-wide">
+                    Тримай лідерство та отримуй пасивний рейтинг щодня!
+                </p>
+            </header>
             
             {topUsers.length > 0 ? (
-                <div className="w-full max-w-md flex flex-col items-center">
-                    {/* Rank 1 */}
-                    {topUsers[0] && (
-                        <div className="z-10">
-                             <TopUserSpot user={topUsers[0]} rank={1} onViewProfile={onViewProfile} />
-                        </div>
-                    )}
-
-                    {/* Ranks 2 and 3 */}
-                    {(topUsers[1] || topUsers[2]) && (
-                        <div className="flex justify-between w-full -mt-8 px-4 sm:px-0">
-                            {topUsers[1] ? (
-                                <TopUserSpot user={topUsers[1]} rank={2} onViewProfile={onViewProfile} />
-                            ) : (
-                                <div className="w-28 md:w-32"/> // Spacer
-                            )}
-                            
-                            {topUsers[2] ? (
-                                <TopUserSpot user={topUsers[2]} rank={3} onViewProfile={onViewProfile} />
-                            ) : (
-                                <div className="w-28 md:w-32"/> // Spacer
-                            )}
-                        </div>
-                    )}
+                <div className="w-full max-w-lg flex items-end justify-center px-2 sm:px-4 gap-1 sm:gap-4 mt-auto mb-4">
+                    {/* Podium logic handles ordering via CSS order property */}
+                    {topUsers[0] && <PodiumSpot user={topUsers[0]} rank={1} onViewProfile={onViewProfile} />}
+                    {topUsers[1] && <PodiumSpot user={topUsers[1]} rank={2} onViewProfile={onViewProfile} />}
+                    {topUsers[2] && <PodiumSpot user={topUsers[2]} rank={3} onViewProfile={onViewProfile} />}
                 </div>
             ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-                    <p className="font-semibold">У вашому місті поки немає лідерів.</p>
-                    <p>Будьте першим!</p>
+                <div className="flex-grow flex flex-col items-center justify-center text-center p-8 bg-gray-100/50 dark:bg-gray-800/30 rounded-3xl border-2 border-dashed border-gray-300 dark:border-gray-700 mx-4">
+                    <p className="text-xl font-black text-gray-400 dark:text-gray-500 uppercase">Місто чекає на героя</p>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 mt-2">Будь першим у списку лідерів!</p>
                 </div>
             )}
+            
+            <div className="mt-4 text-[10px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-widest">
+                Оновлюється в реальному часі
+            </div>
         </div>
     );
 };

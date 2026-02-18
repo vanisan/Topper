@@ -75,8 +75,8 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
         >
             {patternStyle && <div className="absolute inset-0 opacity-40" style={patternStyle}></div>}
             
-            {/* High-contrast overlay for text legibility */}
-            <div className={`absolute inset-0 bg-white/90 dark:bg-gray-900/85 transition-colors duration-300 ${!isCurrentUser ? 'group-hover:bg-white/95 dark:group-hover:bg-gray-800/90' : ''}`}></div>
+            {/* Ultra-high-contrast overlay */}
+            <div className={`absolute inset-0 bg-white/95 dark:bg-gray-950/90 transition-colors duration-300 ${!isCurrentUser ? 'group-hover:bg-white dark:group-hover:bg-black' : ''}`}></div>
 
             <div className="relative z-10 flex items-center space-x-2 sm:space-x-4">
                 {/* Rank */}
@@ -85,18 +85,18 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
                 </div>
 
                 {/* Avatar */}
-                <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-gray-300 dark:border-gray-600 object-cover flex-shrink-0" />
+                <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-gray-300 dark:border-gray-600 object-cover flex-shrink-0 shadow-sm" />
                 
                 {/* Info Container */}
                 <div className="flex-grow min-w-0 overflow-hidden">
                     <div className="flex items-center space-x-1 sm:space-x-2 overflow-hidden">
-                        <h3 className="text-sm sm:text-lg font-bold text-gray-900 dark:text-white truncate" title={user.name}>
+                        <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white truncate" title={user.name}>
                             {user.name}
                         </h3>
-                        {isCurrentUser && <span className="text-[9px] sm:text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 font-bold">Ви</span>}
+                        {isCurrentUser && <span className="text-[9px] sm:text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 font-black uppercase">Ви</span>}
                     </div>
-                    <p className="text-[10px] sm:text-sm font-semibold text-gray-600 dark:text-gray-400 truncate">{user.location}</p>
-                    <p className="text-sm sm:text-xl font-extrabold text-gray-900 dark:text-white mt-0.5">{formatRating(user.rating)} ⭐</p>
+                    <p className="text-[10px] sm:text-sm font-black text-gray-500 dark:text-gray-400 truncate uppercase tracking-tighter">{user.location}</p>
+                    <p className="text-sm sm:text-xl font-black text-gray-900 dark:text-white mt-0.5">{formatRating(user.rating)} ⭐</p>
 
                     {user.giftsReceived && user.giftsReceived.length > 0 && (
                         <div className="mt-1 flex items-center space-x-1 overflow-hidden" aria-label="Останні подарунки">
@@ -106,7 +106,7 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
                                 </span>
                             ))}
                             {user.giftsReceived.length > 4 && (
-                                <span className="text-[10px] sm:text-xs font-bold text-gray-800 dark:text-gray-300 ml-0.5 flex-shrink-0">
+                                <span className="text-[10px] sm:text-xs font-black text-gray-800 dark:text-gray-300 ml-0.5 flex-shrink-0">
                                     +{user.giftsReceived.length - 4}
                                 </span>
                             )}
@@ -119,14 +119,14 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
                     <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2 z-20 flex-shrink-0">
                         <button
                             onClick={() => onLike(user.id)}
-                            className="p-1.5 sm:p-2 rounded-full bg-pink-600 hover:bg-pink-500 transition-colors text-white shadow-md"
+                            className="p-2 sm:p-2.5 rounded-full bg-pink-600 hover:bg-pink-500 transition-colors text-white shadow-lg"
                             aria-label={`Like ${user.name}`}
                         >
                             <HeartIcon className="w-4 h-4 sm:w-6 sm:h-6" />
                         </button>
                         <button
                             onClick={() => onGift(user)}
-                            className="p-1.5 sm:p-2 rounded-full bg-sky-600 hover:bg-sky-500 transition-colors text-white shadow-md"
+                            className="p-2 sm:p-2.5 rounded-full bg-sky-600 hover:bg-sky-500 transition-colors text-white shadow-lg"
                             aria-label={`Send gift to ${user.name}`}
                         >
                             <GiftIcon className="w-4 h-4 sm:w-6 sm:h-6" />
