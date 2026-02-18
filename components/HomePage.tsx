@@ -13,7 +13,7 @@ const RankConfig = {
         height: 'h-40 sm:h-48',
         avatarSize: 'w-20 h-20 sm:w-28 sm:h-28',
         borderColor: 'border-amber-400',
-        bgColor: 'bg-amber-100/90 dark:bg-amber-900/40', // Slightly more opaque
+        bgColor: 'bg-amber-100/70 dark:bg-amber-900/40', // Reduced opacity
         textColor: 'text-amber-700 dark:text-amber-400',
         order: 'order-2',
         label: '1 місце'
@@ -22,7 +22,7 @@ const RankConfig = {
         height: 'h-32 sm:h-40',
         avatarSize: 'w-16 h-16 sm:w-24 sm:h-24',
         borderColor: 'border-slate-300',
-        bgColor: 'bg-slate-100/90 dark:bg-slate-800/50', // Slightly more opaque
+        bgColor: 'bg-slate-100/70 dark:bg-slate-800/50', // Reduced opacity
         textColor: 'text-slate-600 dark:text-slate-300',
         order: 'order-1',
         label: '2 місце'
@@ -31,7 +31,7 @@ const RankConfig = {
         height: 'h-28 sm:h-36',
         avatarSize: 'w-14 h-14 sm:w-20 sm:h-20',
         borderColor: 'border-orange-400',
-        bgColor: 'bg-orange-100/90 dark:bg-orange-900/40', // Slightly more opaque
+        bgColor: 'bg-orange-100/70 dark:bg-orange-900/40', // Reduced opacity
         textColor: 'text-orange-700 dark:text-orange-400',
         order: 'order-3',
         label: '3 місце'
@@ -46,7 +46,7 @@ const PodiumSpot: React.FC<{ user: User; rank: 1 | 2 | 3; onViewProfile: (user: 
             {/* Avatar Section */}
             <button
                 onClick={() => onViewProfile(user)}
-                className={`relative group mb-2 transition-transform duration-300 hover:scale-110`}
+                className={`relative group mb-2 transition-transform duration-300 hover:scale-110 active:scale-95`}
             >
                 <div className={`rounded-full border-4 ${config.borderColor} overflow-hidden ${config.avatarSize} shadow-xl`}>
                     <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />

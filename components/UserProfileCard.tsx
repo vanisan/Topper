@@ -47,66 +47,74 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
     const patternStyle = useMemo<React.CSSProperties | null>(() => {
         if (!user.profileBgEmoji) return null;
         try {
+            // Using a unique ID per user to prevent pattern collisions in the DOM
+            const patternId = `pattern-${user.id.substring(0, 8)}`;
             const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='100%'>
                             <defs>
-                                <pattern id='p' width='32' height='32' patternUnits='userSpaceOnUse'>
-                                    <text x='16' y='8' dominant-baseline='middle' text-anchor='middle' font-size='20'>${user.profileBgEmoji}</text>
-                                    <text x='0' y='24' dominant-baseline='middle' text-anchor='middle' font-size='20'>${user.profileBgEmoji}</text>
+                                <pattern id='${patternId}' width='40' height='40' patternUnits='userSpaceOnUse' patternTransform='rotate(25)'>
+                                    <text x='20' y='25' dominant-baseline='middle' text-anchor='middle' font-size='20'>${user.profileBgEmoji}</text>
                                 </pattern>
                             </defs>
-                            <rect width='100%' height='100%' fill='url(#p)'/>
+                            <rect width='100%' height='100%' fill='url(#${patternId})'/>
                         </svg>`;
             const patternUrl = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-            return { backgroundImage: patternUrl };
+            return { backgroundImage: patternUrl, backgroundRepeat: 'repeat' };
         } catch (error) {
             console.error("Error creating emoji pattern:", error);
             return null;
         }
-    }, [user.profileBgEmoji]);
+    }, [user.profileBgEmoji, user.id]);
 
     return (
         <div 
             onClick={handleCardClick}
-            className={`group relative p-2 sm:p-4 rounded-xl shadow-lg border-2 ${cardBorder} transition-all duration-300 overflow-hidden ${!isCurrentUser ? 'cursor-pointer' : ''}`}
+            className={`group relative p-2 sm:p-4 rounded-xl shadow-lg border-2 ${cardBorder} transition-all duration-300 overflow-hidden ${!isCurrentUser ? 'cursor-pointer active:scale-95' : ''}`}
             style={cardStyle}
             role={!isCurrentUser ? "button" : undefined}
             tabIndex={!isCurrentUser ? 0 : -1}
             onKeyDown={(e) => { if (e.key === 'Enter' && !isCurrentUser) onViewProfile(user) }}
         >
-            {patternStyle && <div className="absolute inset-0 opacity-40" style={patternStyle}></div>}
-            
-            {/* Ultra-high-contrast overlay */}
-            <div className={`absolute inset-0 bg-white/95 dark:bg-gray-950/90 transition-colors duration-300 ${!isCurrentUser ? 'group-hover:bg-white dark:group-hover:bg-black' : ''}`}></div>
+            {/* 
+                Layer 1: Glassmorphism Overlay 
+                Extremely low opacity (10-15%) for maximum "juiciness" of colors.
+            */}
+            <div className={`absolute inset-0 bg-white/10 dark:bg-black/20 backdrop-blur-sm transition-colors duration-300 ${!isCurrentUser ? 'group-hover:bg-white/5 dark:group-hover:bg-black/10' : ''}`}></div>
 
+            {/* 
+                Layer 2: Emoji pattern with 40% opacity 
+                Placed OVER the blur for crisp, bright emojis.
+            */}
+            {patternStyle && <div className="absolute inset-0 opacity-40 pointer-events-none" style={patternStyle}></div>}
+            
             <div className="relative z-10 flex items-center space-x-2 sm:space-x-4">
                 {/* Rank */}
-                <div className={`text-xl sm:text-2xl font-black w-6 sm:w-10 text-center ${textColor} flex-shrink-0`}>
+                <div className={`text-xl sm:text-2xl font-black w-6 sm:w-10 text-center drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)] ${textColor} flex-shrink-0`}>
                     {rank}
                 </div>
 
                 {/* Avatar */}
-                <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-gray-300 dark:border-gray-600 object-cover flex-shrink-0 shadow-sm" />
+                <img src={user.avatarUrl} alt={user.name} className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-white/50 dark:border-gray-600 object-cover flex-shrink-0 shadow-xl" />
                 
                 {/* Info Container */}
                 <div className="flex-grow min-w-0 overflow-hidden">
                     <div className="flex items-center space-x-1 sm:space-x-2 overflow-hidden">
-                        <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white truncate" title={user.name}>
+                        <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" title={user.name}>
                             {user.name}
                         </h3>
-                        {isCurrentUser && <span className="text-[9px] sm:text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 font-black uppercase">Ви</span>}
+                        {isCurrentUser && <span className="text-[9px] sm:text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 font-black uppercase shadow-md">Ви</span>}
                     </div>
-                    <p className="text-[10px] sm:text-sm font-black text-gray-500 dark:text-gray-400 truncate uppercase tracking-tighter">{user.location}</p>
-                    <p className="text-sm sm:text-xl font-black text-gray-900 dark:text-white mt-0.5">{formatRating(user.rating)} ⭐</p>
+                    <p className="text-[10px] sm:text-sm font-black text-gray-800 dark:text-gray-200 truncate uppercase tracking-tighter drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">{user.location}</p>
+                    <p className="text-sm sm:text-xl font-black text-gray-900 dark:text-white mt-0.5 drop-shadow-[0_2px_3px_rgba(0,0,0,0.4)]">{formatRating(user.rating)} ⭐</p>
 
                     {user.giftsReceived && user.giftsReceived.length > 0 && (
                         <div className="mt-1 flex items-center space-x-1 overflow-hidden" aria-label="Останні подарунки">
                             {[...user.giftsReceived].reverse().slice(0, 4).map((gift, index) => (
-                                <span key={`${gift.id}-${index}`} title={gift.name} className="text-sm sm:text-lg transition-transform hover:scale-125 cursor-default flex-shrink-0">
+                                <span key={`${gift.id}-${index}`} title={gift.name} className="text-sm sm:text-lg transition-transform hover:scale-125 cursor-default flex-shrink-0 drop-shadow-lg">
                                     {gift.icon}
                                 </span>
                             ))}
                             {user.giftsReceived.length > 4 && (
-                                <span className="text-[10px] sm:text-xs font-black text-gray-800 dark:text-gray-300 ml-0.5 flex-shrink-0">
+                                <span className="text-[10px] sm:text-xs font-black text-gray-900 dark:text-white bg-white/40 dark:bg-black/40 px-1 rounded ml-0.5 flex-shrink-0 backdrop-blur-sm shadow-sm">
                                     +{user.giftsReceived.length - 4}
                                 </span>
                             )}
@@ -119,14 +127,14 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
                     <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2 z-20 flex-shrink-0">
                         <button
                             onClick={() => onLike(user.id)}
-                            className="p-2 sm:p-2.5 rounded-full bg-pink-600 hover:bg-pink-500 transition-colors text-white shadow-lg"
+                            className="p-2 sm:p-2.5 rounded-full bg-pink-600 hover:bg-pink-500 transition-colors text-white shadow-xl active:scale-90"
                             aria-label={`Like ${user.name}`}
                         >
                             <HeartIcon className="w-4 h-4 sm:w-6 sm:h-6" />
                         </button>
                         <button
                             onClick={() => onGift(user)}
-                            className="p-2 sm:p-2.5 rounded-full bg-sky-600 hover:bg-sky-500 transition-colors text-white shadow-lg"
+                            className="p-2 sm:p-2.5 rounded-full bg-sky-600 hover:bg-sky-500 transition-colors text-white shadow-xl active:scale-90"
                             aria-label={`Send gift to ${user.name}`}
                         >
                             <GiftIcon className="w-4 h-4 sm:w-6 sm:h-6" />

@@ -13,4 +13,6 @@ export const GRADIENT_PALETTE: Gradient[] = [
     { name: 'Twilight', gradient: 'linear-gradient(to top right, #6366f1, #64748b)' },
     { name: 'Rose', gradient: 'linear-gradient(to top right, #fb7185, #d946ef)' },
     { name: 'Sky', gradient: 'linear-gradient(to top right, #22d3ee, #38bdf8)' },
+    { name: 'White', gradient: '#ffffff' },
+    { name: 'Black', gradient: '#000000' },
 ];

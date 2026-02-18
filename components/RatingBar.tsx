@@ -79,7 +79,7 @@ const RatingBar: React.FC<RatingBarProps> = ({ rating }) => {
                     style={barStyle}
                 >
                     {rating >= 10 && (
-                         <span className="px-2 text-white text-xs font-bold [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]">
+                         <span className={`px-2 text-xs font-bold ${rating > 100 ? 'text-black' : 'text-white [text-shadow:0_1px_1px_rgba(0,0,0,0.7)]'}`}>
                             {textValue}
                         </span>
                     )}

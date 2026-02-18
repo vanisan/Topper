@@ -22,14 +22,15 @@ export interface User {
   name: string;
   avatarUrl: string;
   location?: string;
-  rating: number; // This will be calculated on the fly
-  balance: number; // User's internal currency balance
+  rating: number; 
+  balance: number; 
   likesReceived: number;
   giftsReceived: Gift[];
-  likesGiven: number; // Max 3 per day
-  likeTimestamps: { [userId: string]: number }; // userId: timestamp
+  likesGiven: number; 
+  likeTimestamps: { [userId: string]: number }; 
   passiveRating: number;
-  // New fields for detailed profile
+  availableLikes: number;
+  lastRechargeAt: string;
   age?: number;
   hobbies?: string[];
   aboutMe?: string;

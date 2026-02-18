@@ -24,6 +24,15 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, theme, setThem
         setTheme(isDark ? 'light' : 'dark');
     };
 
+    const handleBackgroundSelect = (color: string) => {
+        // If white or black is selected, disable emoji pattern for a monotone design
+        if (color === '#ffffff' || color === '#000000') {
+            onUpdateProfile({ profileBgColor: color, profileBgEmoji: '' });
+        } else {
+            onUpdateProfile({ profileBgColor: color });
+        }
+    };
+
     return (
         <div className="bg-white/80 dark:bg-gray-800/50 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl">
             <div className="flex items-center mb-6 relative">
@@ -53,13 +62,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, theme, setThem
                     </div>
                     <div className="space-y-4">
                         <div>
-                            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Колір</label>
+                            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Колір (Білий/Чорний вимикають смайли)</label>
                             <div className="flex flex-wrap gap-3 mt-2">
                                 {GRADIENT_PALETTE.map(gradient => (
                                     <button
                                         key={gradient.name}
-                                        onClick={() => onUpdateProfile({ profileBgColor: gradient.gradient })}
-                                        className={`w-8 h-8 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800 ${currentUser.profileBgColor === gradient.gradient ? 'ring-2 ring-offset-2 ring-purple-600 dark:ring-offset-gray-700' : ''}`}
+                                        onClick={() => handleBackgroundSelect(gradient.gradient)}
+                                        className={`w-8 h-8 rounded-full transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800 border ${gradient.gradient === '#ffffff' ? 'border-gray-300' : 'border-transparent'} ${currentUser.profileBgColor === gradient.gradient ? 'ring-2 ring-offset-2 ring-purple-600 dark:ring-offset-gray-700' : ''}`}
                                         style={{ background: gradient.gradient }}
                                         aria-label={`Select color ${gradient.name}`}
                                     />

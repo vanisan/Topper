@@ -30,17 +30,13 @@ type View =
     | { name: 'payment'; amount: number }
     | { name: 'shop'; forUser?: User };
 
-// Dummy domain for creating technical emails from logins
 const DUMMY_DOMAIN = 'topper.app';
 
-// Helper to convert base64 data URL to a Blob for uploading
 function dataURLtoBlob(dataurl: string): Blob | null {
     const arr = dataurl.split(',');
     if (arr.length < 2) return null;
-    
     const mimeMatch = arr[0].match(/:(.*?);/);
     if (!mimeMatch) return null;
-    
     const mime = mimeMatch[1];
     const bstr = atob(arr[1]);
     let n = bstr.length;
@@ -50,7 +46,6 @@ function dataURLtoBlob(dataurl: string): Blob | null {
     }
     return new Blob([u8arr], { type: mime });
 }
-
 
 const App: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
@@ -67,11 +62,9 @@ const App: React.FC = () => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
         });
-
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
         });
-
         return () => subscription.unsubscribe();
     }, []);
 
@@ -90,6 +83,7 @@ const App: React.FC = () => {
                 .single();
 
             if (profileError) throw profileError;
+            
             setCurrentUser(profileData);
 
             const { data: usersData, error: usersError } = await supabase.from('profiles').select('*');
@@ -113,15 +107,10 @@ const App: React.FC = () => {
     
     useEffect(() => {
         if (!currentUser) return;
-
         const handleRealtimeMessage = (payload: RealtimePostgresChangesPayload<{ [key: string]: any }>) => {
             const eventType = payload.eventType;
             const record = (eventType === 'DELETE' ? payload.old : payload.new) as Message;
-    
-            if (!record || (record.receiverId !== currentUser.id && record.senderId !== currentUser.id)) {
-                return;
-            }
-    
+            if (!record || (record.receiverId !== currentUser.id && record.senderId !== currentUser.id)) return;
             if (eventType === 'INSERT') {
                 setMessages(prev => {
                     if (prev.find(m => m.id === record.id)) return prev;
@@ -133,24 +122,16 @@ const App: React.FC = () => {
                 setMessages(prev => prev.filter(msg => msg.id !== record.id));
             }
         };
-
         const channel = supabase.channel('messages-channel')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, handleRealtimeMessage)
             .subscribe();
-        
-        return () => {
-            supabase.removeChannel(channel);
-        };
+        return () => { supabase.removeChannel(channel); };
     }, [currentUser]);
-
 
     useEffect(() => {
         localStorage.setItem('topper-theme', theme);
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        if (theme === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
     }, [theme]);
 
     const calculateRating = useCallback((user: User): number => {
@@ -161,7 +142,6 @@ const App: React.FC = () => {
         if (user.hobbies) profilePoints += user.hobbies.length * 2;
         if (user.aboutMe && user.aboutMe.length >= 50) profilePoints += 3;
         if (user.relationshipStatus) profilePoints += 5;
-
         const likePoints = user.likesReceived;
         const giftPoints = user.giftsReceived.reduce((sum, gift) => sum + gift.rating, 0);
         return profilePoints + likePoints + giftPoints + user.passiveRating;
@@ -178,19 +158,18 @@ const App: React.FC = () => {
         return messages.filter(m => m.receiverId === currentUser.id && !m.is_read).length;
     }, [messages, currentUser]);
 
-
     const handleLikeUser = async (userId: string) => {
         if (!currentUser) return;
         
-        if (currentUser.likesGiven >= 3) {
-            alert("У вас не залишилося лайків на сьогодні.");
+        if (currentUser.availableLikes <= 0) {
+            alert("У вас не залишилося лайків. Заберіть щоденний бонус або зачекайте оновлення о 00:00.");
             return;
         }
 
         const now = new Date().getTime();
-        const canLike = !currentUser.likeTimestamps[userId] || (now - currentUser.likeTimestamps[userId] > 24 * 60 * 60 * 1000);
+        const canLikePartner = !currentUser.likeTimestamps[userId] || (now - currentUser.likeTimestamps[userId] > 24 * 60 * 60 * 1000);
         
-        if (!canLike) {
+        if (!canLikePartner) {
              alert("Ви можете лайкати цього користувача лише раз на день.");
              return;
         }
@@ -199,6 +178,7 @@ const App: React.FC = () => {
         if (!targetUser) return;
         
         const newLikeTimestamps = { ...currentUser.likeTimestamps, [userId]: now };
+        const newAvailableLikes = currentUser.availableLikes - 1;
 
         try {
             const { error: targetUserError } = await supabase
@@ -210,7 +190,11 @@ const App: React.FC = () => {
 
             const { data: updatedCurrentUser, error: currentUserError } = await supabase
                 .from('profiles')
-                .update({ likesGiven: currentUser.likesGiven + 1, likeTimestamps: newLikeTimestamps })
+                .update({ 
+                    likesGiven: currentUser.likesGiven + 1, 
+                    likeTimestamps: newLikeTimestamps,
+                    availableLikes: newAvailableLikes
+                })
                 .eq('id', currentUser.id)
                 .select()
                 .single();
@@ -230,22 +214,58 @@ const App: React.FC = () => {
         }
     };
 
+    const handleClaimDailyLikes = async () => {
+        if (!currentUser) return;
+        
+        const now = new Date();
+        const lastClaim = new Date(currentUser.lastRechargeAt);
+        
+        const isSameDay = now.getFullYear() === lastClaim.getFullYear() &&
+                          now.getMonth() === lastClaim.getMonth() &&
+                          now.getDate() === lastClaim.getDate();
+        
+        // Allow claim if it's a different day OR if they've never claimed (1970 date)
+        const neverClaimed = lastClaim.getFullYear() === 1970;
+
+        if (isSameDay && !neverClaimed) {
+            alert("Ви вже забирали сьогоднішні лайки!");
+            return;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .update({ 
+                    availableLikes: currentUser.availableLikes + 3,
+                    lastRechargeAt: now.toISOString()
+                })
+                .eq('id', currentUser.id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            setCurrentUser(data);
+            setUsers(prev => prev.map(u => u.id === currentUser.id ? data : u));
+            alert("Ви отримали +3 лайки!");
+        } catch (error) {
+            console.error("Error claiming likes:", error);
+            alert("Не вдалося отримати лайки.");
+        }
+    };
+
     const handleSendGift = async (receiver: User, gift: Gift) => {
         if (!currentUser) return false;
         if (currentUser.balance < gift.cost) {
             alert('Недостатньо коштів на балансі.');
             return false;
         }
-    
         const { error } = await supabase.rpc('send_gift_and_update_balance', {
             sender_id: currentUser.id,
             receiver_id: receiver.id,
             gift_cost: gift.cost,
             gift_payload: gift,
         });
-    
         if (error) {
-            console.error('Error sending gift:', error);
             alert(`Не вдалося надіслати подарунок: ${error.message}`);
             return false;
         } else {
@@ -255,162 +275,81 @@ const App: React.FC = () => {
             return true;
         }
     };
-    
 
-    const handleNavigateToShop = (user: User) => {
-        setView({ name: 'shop', forUser: user });
-    };
+    const handleNavigateToShop = (user: User) => { setView({ name: 'shop', forUser: user }); };
     
     const handleRegister = async (data: Pick<RegistrationData, 'login' | 'password'>): Promise<{success: boolean, error?: string, rateLimited?: boolean}> => {
         const technicalEmail = `${data.login}@${DUMMY_DOMAIN}`;
         const { error: signUpError } = await supabase.auth.signUp({
             email: technicalEmail,
             password: data.password!,
-            options: {
-                data: {
-                    login: data.login,
-                    // The trigger requires a non-null name, so we pass an empty string temporarily.
-                    name: '',
-                }
-            }
+            options: { data: { login: data.login, name: '' } }
         });
-
         if (signUpError) {
-            console.error("Sign up error:", signUpError);
             const errorMessage = signUpError.message.toLowerCase();
-
-            if (errorMessage.includes('user already registered')) {
-                return { success: false, error: 'Цей логін вже зайнятий. Спробуйте інший.' };
-            }
-            if (errorMessage.includes('rate limit')) {
-                 return { 
-                     success: false, 
-                     error: 'Перевищено ліміт спроб. Ймовірно, ваш пароль занадто простий або ви спробували забагато разів. Зачекайте хвилину і спробуйте знову з надійним паролем.', 
-                     rateLimited: true 
-                 };
-            }
-            if (errorMessage.includes('weak password')) {
-                 return { success: false, error: 'Пароль занадто простий. Будь ласка, використайте комбінацію літер, цифр та спецсимволів.' };
-            }
-
-            return { success: false, error: 'Невідома помилка реєстрації. Спробуйте пізніше.' };
+            if (errorMessage.includes('user already registered')) return { success: false, error: 'Цей логін вже зайнятий.' };
+            return { success: false, error: 'Помилка реєстрації.' };
         }
-        
         return { success: true };
     };
 
     const handleLogin = async (login: string, password: string): Promise<{success: boolean, error?: string}> => {
         const technicalEmail = `${login.toLowerCase()}@${DUMMY_DOMAIN}`;
-        const { error } = await supabase.auth.signInWithPassword({
-            email: technicalEmail,
-            password: password,
-        });
-
-        if (error) {
-            console.error("Login error:", error);
-            return { success: false, error: "Неправильний логін або пароль." };
-        }
+        const { error } = await supabase.auth.signInWithPassword({ email: technicalEmail, password: password });
+        if (error) return { success: false, error: "Неправильний логін або пароль." };
         return { success: true };
     }
     
     const handleLogout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) console.error("Logout error:", error);
-        else {
-            setCurrentUser(null);
-            setUsers([]);
-            setMessages([]);
-            setView({ name: 'rating' });
-        }
+        await supabase.auth.signOut();
+        setCurrentUser(null);
+        setUsers([]);
+        setMessages([]);
+        setView({ name: 'rating' });
     }
 
     const handleUpdateProfile = async (updatedData: Partial<User>) => {
         if (!currentUser) return;
-
         const dataToUpdate = { ...updatedData };
-
         try {
-            // Helper to upload a base64 image and get its public URL
             const uploadImage = async (dataUrl: string, folder: 'avatars' | 'backgrounds'): Promise<string> => {
                 const blob = dataURLtoBlob(dataUrl);
-                if (!blob) throw new Error('Недійсний формат зображення.');
-
+                if (!blob) throw new Error('Недійсний формат.');
                 const filePath = `${folder}/${currentUser.id}-${Date.now()}.jpeg`;
-                const { data, error: uploadError } = await supabase.storage
-                    .from('profile-media')
-                    .upload(filePath, blob, { upsert: false, contentType: 'image/jpeg' });
-
-                if (uploadError) throw uploadError;
-
+                const { data, error } = await supabase.storage.from('profile-media').upload(filePath, blob, { upsert: false, contentType: 'image/jpeg' });
+                if (error) throw error;
                 const { data: { publicUrl } } = supabase.storage.from('profile-media').getPublicUrl(data.path);
                 return publicUrl;
             };
-
-            // Check if avatar is being updated with a new base64 image
             if (dataToUpdate.avatarUrl && dataToUpdate.avatarUrl.startsWith('data:image')) {
                 dataToUpdate.avatarUrl = await uploadImage(dataToUpdate.avatarUrl, 'avatars');
             }
-
-            // Update profile only if there's something to update
             if (Object.keys(dataToUpdate).length > 0) {
-                const { error, data } = await supabase
-                    .from('profiles')
-                    .update(dataToUpdate)
-                    .eq('id', currentUser.id)
-                    .select()
-                    .single();
-
+                const { error, data } = await supabase.from('profiles').update(dataToUpdate).eq('id', currentUser.id).select().single();
                 if (error) throw error;
-                
                 setCurrentUser(data);
                 setUsers(prev => prev.map(u => u.id === currentUser.id ? data : u));
             }
         } catch (error) {
-            console.error("Profile update error:", error);
-            alert(`Не вдалося оновити профіль. Переконайтесь, що ви налаштували сховище (Storage) в Supabase. Помилка: ${(error as Error).message}`);
+            alert(`Помилка: ${(error as Error).message}`);
         }
     };
     
-    const handleProceedToPayment = (amount: number) => {
-        setView({ name: 'payment', amount });
-    };
+    const handleProceedToPayment = (amount: number) => { setView({ name: 'payment', amount }); };
     
     const handleTopUp = async (amount: number): Promise<boolean> => {
         if (!currentUser) return false;
         const newBalance = (currentUser.balance || 0) + amount;
-        
-        const { data, error } = await supabase
-            .from('profiles')
-            .update({ balance: newBalance })
-            .eq('id', currentUser.id)
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Top-up error:', error);
-            alert('Не вдалося поповнити баланс.');
-            return false;
-        } else {
-            setCurrentUser(data);
-            return true;
-        }
+        const { data, error } = await supabase.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id).select().single();
+        if (error) return false;
+        setCurrentUser(data);
+        return true;
     };
 
     const handleSendMessage = async (receiverId: string, text: string) => {
         if (!currentUser || !text.trim()) return;
-
-        const newMessage = {
-            senderId: currentUser.id,
-            receiverId: receiverId,
-            text: text.trim(),
-            timestamp: new Date().toISOString()
-        };
-
-        const { error } = await supabase.from('messages').insert(newMessage);
-        if (error) {
-            console.error('Error sending message:', error);
-            alert("Не вдалося відправити повідомлення.");
-        }
+        const newMessage = { senderId: currentUser.id, receiverId: receiverId, text: text.trim(), timestamp: new Date().toISOString() };
+        await supabase.from('messages').insert(newMessage);
     };
 
     const renderContent = () => {
@@ -436,38 +375,19 @@ const App: React.FC = () => {
             case 'topup':
                 return <TopUpPage currentUser={currentUser} onProceedToPayment={handleProceedToPayment} onBack={() => setView({ name: 'menu' })} />;
             case 'payment':
-                return <FakePaymentPage 
-                            amount={view.amount} 
-                            onPaymentSuccess={handleTopUp} 
-                            onCancel={() => setView({ name: 'topup' })}
-                            onPaymentComplete={() => setView({ name: 'menu' })}
-                        />;
-            case 'info':
-                 return <div className="text-center p-10 text-gray-500 dark:text-gray-400">{'info'} в розробці. <button onClick={() => setView({name: 'menu'})} className="text-purple-500">Назад</button></div>;
-            default:
-                return null;
+                return <FakePaymentPage amount={view.amount} onPaymentSuccess={handleTopUp} onCancel={() => setView({ name: 'topup' })} onPaymentComplete={() => setView({ name: 'menu' })} />;
+            default: return null;
         }
     };
     
-    if (isLoading) {
-        return <div className="h-full flex items-center justify-center text-xl font-bold">Завантаження...</div>
-    }
-
-    if (!session || !currentUser) {
-        return <AuthFlow onRegister={handleRegister} onLogin={handleLogin}/>;
-    }
-
-    // After login/signup, if profile is not complete (name is empty), show the completion form.
-    if (!currentUser.name) {
-        return <CompleteProfile user={currentUser} onComplete={handleUpdateProfile} />;
-    }
+    if (isLoading) return <div className="h-full flex items-center justify-center text-xl font-bold">Завантаження...</div>
+    if (!session || !currentUser) return <AuthFlow onRegister={handleRegister} onLogin={handleLogin}/>;
+    if (!currentUser.name) return <CompleteProfile user={currentUser} onComplete={handleUpdateProfile} />;
 
     return (
         <div className="h-full grid grid-rows-[auto_1fr]">
-            <Header currentUser={currentUser} />
-            <main className="overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20">
-                {renderContent()}
-            </main>
+            <Header currentUser={currentUser} onClaimLikes={handleClaimDailyLikes} />
+            <main className="overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20">{renderContent()}</main>
             <Navbar activeTab={activeTab} onTabChange={(tab) => setView({name: tab as any})} />
         </div>
     );

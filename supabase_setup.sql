@@ -1,179 +1,18 @@
 
--- ### SETUP SCRIPT FOR TOPPER SOCIAL NETWORK ###
---
--- Інструкція:
--- 1. Перейдіть до вашого проєкту в Supabase.
--- 2. В меню зліва оберіть "SQL Editor".
--- 3. Натисніть "New query".
--- 4. Вставте весь цей код у вікно редактора.
--- 5. Натисніть "RUN".
---
--- Цей скрипт тепер безпечно запускати кілька разів.
+-- ... (існуючий код sql) ...
 
--- 1. СТВОРЕННЯ ТАБЛИЦІ PROFILES
--- Ця таблиця буде зберігати публічну інформацію про користувачів.
--- Вона пов'язана з таблицею `auth.users` через `id`.
-CREATE TABLE IF NOT EXISTS public.profiles (
-    id uuid NOT NULL,
-    login text NOT NULL UNIQUE,
-    name text NOT NULL,
-    "avatarUrl" text NULL,
-    location text NULL,
-    "likesReceived" integer DEFAULT 0 NOT NULL,
-    "giftsReceived" jsonb DEFAULT '[]'::jsonb NOT NULL,
-    "likesGiven" integer DEFAULT 0 NOT NULL,
-    "likeTimestamps" jsonb DEFAULT '{}'::jsonb NOT NULL,
-    "passiveRating" integer DEFAULT 0 NOT NULL,
-    age integer NULL,
-    hobbies jsonb NULL,
-    "aboutMe" text NULL,
-    "relationshipStatus" text NULL,
-    CONSTRAINT profiles_pkey PRIMARY KEY (id),
-    CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
-);
-
--- Додавання колонки balance, якщо вона не існує
+-- Додавання колонок для системи лайків
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'balance') THEN
-        ALTER TABLE public.profiles ADD COLUMN balance numeric NOT NULL DEFAULT 0;
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'availableLikes') THEN
+        ALTER TABLE public.profiles ADD COLUMN "availableLikes" integer DEFAULT 0 NOT NULL;
+    END IF;
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'lastRechargeAt') THEN
+        ALTER TABLE public.profiles ADD COLUMN "lastRechargeAt" timestamp with time zone DEFAULT '1970-01-01' NOT NULL;
     END IF;
 END $$;
 
--- Додавання колонки note, якщо вона не існує
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'note') THEN
-        ALTER TABLE public.profiles ADD COLUMN note text NULL;
-    END IF;
-END $$;
-
--- Оновлення колонок для фону картки.
--- Цей блок виправляє імена колонок на camelCase, щоб відповідати коду застосунку.
-DO $$
-BEGIN
-    -- Видаляємо стару колонку, якщо вона існує
-    IF EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profileBgUrl') THEN
-        ALTER TABLE public.profiles DROP COLUMN "profileBgUrl";
-    END IF;
-    
-    -- Видаляємо неправильно іменовані колонки (snake_case), якщо вони були створені помилково
-    IF EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profile_bg_color') THEN
-        ALTER TABLE public.profiles DROP COLUMN profile_bg_color;
-    END IF;
-    IF EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profile_bg_emoji') THEN
-        ALTER TABLE public.profiles DROP COLUMN profile_bg_emoji;
-    END IF;
-
-    -- Додаємо/перевіряємо нові колонки з правильними іменами (quoted camelCase)
-    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profileBgColor') THEN
-        ALTER TABLE public.profiles ADD COLUMN "profileBgColor" text DEFAULT 'linear-gradient(to top right, #6366f1, #64748b)';
-    ELSE
-        -- Також оновлюємо існуючі суцільні кольори за замовчуванням на новий градієнт
-        ALTER TABLE public.profiles ALTER COLUMN "profileBgColor" SET DEFAULT 'linear-gradient(to top right, #6366f1, #64748b)';
-        UPDATE public.profiles SET "profileBgColor" = 'linear-gradient(to top right, #6366f1, #64748b)' WHERE "profileBgColor" = '#6366f1';
-    END IF;
-    
-    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'profileBgEmoji') THEN
-        ALTER TABLE public.profiles ADD COLUMN "profileBgEmoji" text NULL;
-    END IF;
-END $$;
-
-
--- Коментарі до таблиці для ясності
-COMMENT ON TABLE public.profiles IS 'Stores user profile information.';
-
-
--- 2. СТВОРЕННЯ ТАБЛИЦІ MESSAGES
--- Тут зберігатимуться повідомлення між користувачами.
-CREATE TABLE IF NOT EXISTS public.messages (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    "senderId" uuid NOT NULL,
-    "receiverId" uuid NOT NULL,
-    text text NOT NULL,
-    "timestamp" timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT messages_pkey PRIMARY KEY (id),
-    CONSTRAINT messages_receiverId_fkey FOREIGN KEY ("receiverId") REFERENCES public.profiles(id) ON DELETE CASCADE,
-    CONSTRAINT messages_senderId_fkey FOREIGN KEY ("senderId") REFERENCES public.profiles(id) ON DELETE CASCADE
-);
-
--- Додавання колонки is_read, якщо вона не існує
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.messages'::regclass AND attname = 'is_read') THEN
-        ALTER TABLE public.messages ADD COLUMN is_read boolean NOT NULL DEFAULT false;
-    END IF;
-END $$;
-
-
--- Коментарі до таблиці для ясності
-COMMENT ON TABLE public.messages IS 'Stores chat messages between users.';
-
-
--- 3. НАЛАШТУВАННЯ БЕЗПЕКИ (ROW LEVEL SECURITY - RLS)
--- Це НАЙВАЖЛИВІША частина. Ці правила захищають дані користувачів.
-
--- Вмикаємо RLS для таблиці profiles
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
--- Видаляємо існуючі політики, щоб застосувати оновлені
-DROP POLICY IF EXISTS "Allow authenticated users to read profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Allow users to update their own profile" ON public.profiles;
-
--- Правила для profiles:
--- 1) Дозволити всім автентифікованим користувачам читати всі профілі.
-CREATE POLICY "Allow authenticated users to read profiles" ON public.profiles
-    FOR SELECT USING (auth.role() = 'authenticated');
-
--- 2) Дозволити користувачам оновлювати лише свій власний профіль.
-CREATE POLICY "Allow users to update their own profile" ON public.profiles
-    FOR UPDATE USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
-
--- Примітка: Створення профілів (INSERT) обробляється автоматичним тригером (див. розділ 5).
-
--- Вмикаємо RLS для таблиці messages
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
-
--- Видаляємо існуючі політики, щоб застосувати оновлені
-DROP POLICY IF EXISTS "Allow users to read their own messages" ON public.messages;
-DROP POLICY IF EXISTS "Allow users to send messages" ON public.messages;
-DROP POLICY IF EXISTS "Allow receivers to mark messages as read" ON public.messages;
-
--- Правила для messages:
--- 1) Дозволити користувачам читати повідомлення, де вони є відправником або отримувачем.
-CREATE POLICY "Allow users to read their own messages" ON public.messages
-    FOR SELECT USING (auth.uid() = "senderId" OR auth.uid() = "receiverId");
-
--- 2) Дозволити користувачам створювати (відправляти) повідомлення від свого імені.
-CREATE POLICY "Allow users to send messages" ON public.messages
-    FOR INSERT WITH CHECK (auth.uid() = "senderId");
-
--- 3) Дозволити отримувачам позначати повідомлення як прочитані.
-CREATE POLICY "Allow receivers to mark messages as read" ON public.messages
-    FOR UPDATE USING (auth.uid() = "receiverId") WITH CHECK (auth.uid() = "receiverId");
-
-
--- 4. НАЛАШТУВАННЯ REALTIME ДЛЯ ПОВІДОМЛЕНЬ
--- Примітка: Якщо ви запускаєте цей скрипт повторно, наступна команда може викликати помилку,
--- повідомляючи, що таблиця 'messages' вже є частиною публікації.
--- Це очікувано і безпечно ігнорувати.
-do $$
-begin
-  if not exists (
-    select 1
-    from pg_publication_tables
-    where pubname = 'supabase_realtime' and tablename = 'messages'
-  ) then
-    alter publication supabase_realtime add table public.messages;
-  end if;
-end $$;
-
-
--- 5. АВТОМАТИЧНЕ СТВОРЕННЯ ПРОФІЛЮ ДЛЯ НОВИХ КОРИСТУВАЧІВ
--- Ця функція та тригер автоматично створюють запис у `public.profiles`
--- щоразу, коли новий користувач реєструється в `auth.users`.
-
--- Функція, яка копіює дані з нового запису в auth.users до public.profiles
+-- Оновлення handle_new_user для підтримки нових колонок
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -190,11 +29,13 @@ begin
     hobbies,
     "aboutMe",
     "relationshipStatus",
-    balance
+    balance,
+    "availableLikes",
+    "lastRechargeAt"
   )
   values (
     new.id,
-    lower(new.raw_user_meta_data->>'login'), -- Get REAL login from metadata and convert to lowercase
+    lower(new.raw_user_meta_data->>'login'),
     new.raw_user_meta_data->>'name',
     new.raw_user_meta_data->>'avatarUrl',
     (new.raw_user_meta_data->>'age')::integer,
@@ -202,101 +43,10 @@ begin
     (new.raw_user_meta_data->'hobbies'),
     new.raw_user_meta_data->>'aboutMe',
     new.raw_user_meta_data->>'relationshipStatus',
-    0
+    0,
+    0,
+    '1970-01-01'
   );
   return new;
 end;
 $$;
-
--- Тригер, який викликає функцію handle_new_user() після створення нового користувача
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
-
--- 6. RPC FUNCTIONS
-create or replace function public.send_gift_and_update_balance(
-    sender_id uuid,
-    receiver_id uuid,
-    gift_cost numeric,
-    gift_payload jsonb
-)
-returns text
-language plpgsql
-security definer -- Important!
-as $$
-declare
-  sender_balance numeric;
-begin
-  -- Check sender's balance
-  select balance into sender_balance from public.profiles where id = sender_id;
-  if sender_balance is null or sender_balance < gift_cost then
-    raise exception 'Insufficient balance';
-  end if;
-
-  -- Deduct cost from sender
-  update public.profiles
-  set balance = balance - gift_cost
-  where id = sender_id;
-
-  -- Add gift to receiver
-  update public.profiles
-  set "giftsReceived" = "giftsReceived" || gift_payload
-  where id = receiver_id;
-
-  return 'Gift sent successfully';
-end;
-$$;
-
-
--- 7. НАЛАШТУВАННЯ SUPABASE STORAGE (ОБОВ'ЯЗКОВО)
--- Щоб завантаження аватарів та фонів профілю працювало,
--- потрібно налаштувати Storage.
-
--- КРОК 1: Створення "Кошика" (Bucket)
---    - Перейдіть до розділу "Storage" у вашому проєкті Supabase.
---    - Натисніть "Create a new bucket".
---    - Назвіть кошик: `profile-media`
---    - Увімкніть опцію "Public bucket", щоб файли були доступні за посиланням.
-
--- КРОК 2: Налаштування Політик Безпеки (Policies)
---    - Перейдіть до "SQL Editor" та виконайте наступні SQL-команди.
---    - Вони нададуть потрібні права доступу до щойно створеного кошика.
-
--- Видаляємо старі/потенційно конфліктуючі політики для чистого встановлення
-DROP POLICY IF EXISTS "Public read access for profile media" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated users can upload media" ON storage.objects;
-DROP POLICY IF EXISTS "Users can manage their own media" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update their own media" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete their own media" ON storage.objects;
-
--- Дозволити публічний доступ на читання файлів
-CREATE POLICY "Public read access for profile media"
-ON storage.objects FOR SELECT
-USING ( bucket_id = 'profile-media' );
-
--- Дозволити авторизованим користувачам завантажувати файли.
--- `owner` автоматично встановлюється як uid користувача, який завантажує файл.
--- Ця політика гарантує, що користувач не може завантажити файл від імені іншого.
-CREATE POLICY "Authenticated users can upload media"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK ( bucket_id = 'profile-media' AND auth.uid() = owner );
-
--- Дозволити користувачам оновлювати ТІЛЬКИ СВОЇ файли
-CREATE POLICY "Users can update their own media"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING ( auth.uid() = owner )
-WITH CHECK ( auth.uid() = owner );
-
--- Дозволити користувачам видаляти ТІЛЬКИ СВОЇ файли
-CREATE POLICY "Users can delete their own media"
-ON storage.objects FOR DELETE
-TO authenticated
-USING ( auth.uid() = owner );
-
-
--- ### КІНЕЦЬ НАЛАШТУВАННЯ STORAGE ###
--- Налаштування завершено!

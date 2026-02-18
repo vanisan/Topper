@@ -15,7 +15,6 @@ import ImageUploader from './ImageUploader';
 import CameraIcon from './icons/CameraIcon';
 import RatingBar from './RatingBar';
 
-
 interface ProfilePageProps {
     user: User;
     currentUser: User;
@@ -77,17 +76,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
         return (
             <div className="bg-white/90 dark:bg-gray-800/80 backdrop-blur-sm p-4 sm:p-6 rounded-2xl shadow-2xl space-y-6 max-h-[85vh] overflow-y-auto">
                  <h2 className="text-2xl font-bold text-center text-purple-700 dark:text-purple-300">Редагувати профіль</h2>
-                 
                  <div className="space-y-2">
                     <label htmlFor="note-input" className="font-bold text-gray-800 dark:text-gray-200">Заметка (до 200 символів)</label>
                     <div className="relative">
-                        <textarea id="note-input" name="note" placeholder="Ваш статус, оголошення або цитата..." value={formData.note} onChange={handleInputChange} rows={3} maxLength={200} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none pr-16 text-gray-900 dark:text-white"></textarea>
-                        <span className="absolute bottom-2 right-3 text-xs text-gray-500 dark:text-gray-400">
-                            {formData.note?.length || 0} / 200
-                        </span>
+                        <textarea id="note-input" name="note" placeholder="Ваш статус..." value={formData.note} onChange={handleInputChange} rows={3} maxLength={200} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none pr-16 text-gray-900 dark:text-white"></textarea>
+                        <span className="absolute bottom-2 right-3 text-xs text-gray-500 dark:text-gray-400">{formData.note?.length || 0} / 200</span>
                     </div>
                 </div>
-
                  <div className="space-y-2">
                     <label className="font-bold text-gray-800 dark:text-gray-200">Місто</label>
                     <select name="location" value={formData.location} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none text-gray-900 dark:text-white font-medium">
@@ -95,7 +90,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                         {ukrainianCities.map(city => <option key={city} value={city}>{city}</option>)}
                     </select>
                  </div>
-                 
                  <div>
                     <label className="font-bold text-gray-800 dark:text-gray-200 mb-2 block">Хобі (до 5)</label>
                     <div className="flex flex-wrap gap-2">
@@ -106,20 +100,6 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                         ))}
                     </div>
                  </div>
-
-                 <div className="space-y-2">
-                     <label className="font-bold text-gray-800 dark:text-gray-200">Про себе</label>
-                     <textarea name="aboutMe" placeholder="Розкажіть про себе..." value={formData.aboutMe} onChange={handleInputChange} rows={4} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none text-gray-900 dark:text-white"></textarea>
-                 </div>
-                 
-                 <div className="space-y-2">
-                     <label className="font-bold text-gray-800 dark:text-gray-200">Сімейний стан</label>
-                     <select name="relationshipStatus" value={formData.relationshipStatus} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none text-gray-900 dark:text-white font-medium">
-                        <option value="">Не вказано</option>
-                        {RELATIONSHIP_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                    </select>
-                 </div>
-
                  <div className="flex justify-end space-x-4 mt-6">
                     <button onClick={() => setIsEditing(false)} className="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors">Скасувати</button>
                     <button onClick={handleSave} className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors">Зберегти</button>
@@ -145,6 +125,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                     <ArrowLeftIcon className="w-6 h-6 text-gray-900 dark:text-white" />
                 </button>
             )}
+
+
             <div className="text-center pt-8">
                 <div className="relative w-24 h-24 mx-auto">
                     <img src={user.avatarUrl} alt={user.name} className="w-24 h-24 rounded-full object-cover border-4 border-purple-500 shadow-md" />
@@ -167,29 +149,16 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
             
             <NoteBlock note={user.note} />
 
-            {/* Quick Actions for others profiles - extremely compact horizontal layout */}
             {!isCurrentUser && (
                 <div className="mt-4 flex space-x-2">
-                    <button 
-                        onClick={() => onLike(user.id)} 
-                        className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white transition-colors shadow-md"
-                    >
-                        <HeartIcon className="w-4 h-4" />
-                        <span className="text-xs font-black uppercase">Лайк</span>
+                    <button onClick={() => onLike(user.id)} className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white transition-colors shadow-md">
+                        <HeartIcon className="w-4 h-4" /><span className="text-xs font-black uppercase">Лайк</span>
                     </button>
-                    <button 
-                        onClick={() => onGift(user)} 
-                        className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white transition-colors shadow-md"
-                    >
-                        <GiftIcon className="w-4 h-4" />
-                        <span className="text-xs font-black uppercase">Дар</span>
+                    <button onClick={() => onGift(user)} className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white transition-colors shadow-md">
+                        <GiftIcon className="w-4 h-4" /><span className="text-xs font-black uppercase">Дар</span>
                     </button>
-                    <button 
-                        onClick={() => onSendMessage(user)} 
-                        className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white transition-colors shadow-md"
-                    >
-                        <MessageIcon className="w-4 h-4" />
-                        <span className="text-xs font-black uppercase">Чат</span>
+                    <button onClick={() => onSendMessage(user)} className="flex-1 flex items-center justify-center space-x-2 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white transition-colors shadow-md">
+                        <MessageIcon className="w-4 h-4" /><span className="text-xs font-black uppercase">Чат</span>
                     </button>
                 </div>
             )}
@@ -203,12 +172,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 
             <div className="mt-8">
                 {isCurrentUser && (
-                    <button 
-                        onClick={() => setIsEditing(true)} 
-                        className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors shadow-lg"
-                    >
-                        <PencilIcon className="w-5 h-5" />
-                        <span>Редагувати профіль</span>
+                    <button onClick={() => setIsEditing(true)} className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors shadow-lg">
+                        <PencilIcon className="w-5 h-5" /><span>Редагувати профіль</span>
                     </button>
                 )}
             </div>
@@ -220,18 +185,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 const NoteBlock: React.FC<{ note?: string }> = ({ note }) => (
     <div className="mt-6 bg-yellow-100 dark:bg-yellow-900/30 p-4 rounded-lg border-l-4 border-yellow-400 dark:border-yellow-600 shadow-sm">
         <h4 className="font-black text-xs text-yellow-800 dark:text-yellow-400 mb-2 uppercase tracking-wide">Заметка</h4>
-        <p className="text-gray-900 dark:text-gray-100 italic font-medium whitespace-pre-wrap text-sm leading-relaxed">
-            {note || 'Користувач ще не додав заметку.'}
-        </p>
+        <p className="text-gray-900 dark:text-gray-100 italic font-medium whitespace-pre-wrap text-sm leading-relaxed">{note || 'Користувач ще не додав заметку.'}</p>
     </div>
 );
 
-
 const InfoRow: React.FC<{ icon: React.FC<{ className?: string }>, label: string, value?: string | string[] }> = ({ icon: Icon, label, value }) => {
     const displayValue = Array.isArray(value) ? value.join(', ') : value;
-
     if (!displayValue) return null;
-
     return (
         <div className="flex items-start space-x-4 py-4 first:pt-3 last:pb-3">
             <Icon className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
@@ -242,6 +202,5 @@ const InfoRow: React.FC<{ icon: React.FC<{ className?: string }>, label: string,
         </div>
     );
 };
-
 
 export default ProfilePage;
