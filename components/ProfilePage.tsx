@@ -49,8 +49,10 @@ const getZodiacSign = (dateStr: string): string => {
 };
 
 const calculateAge = (birthDate: string): number => {
+    if (!birthDate) return 0;
     const today = new Date();
     const birth = new Date(birthDate);
+    if (isNaN(birth.getTime())) return 0;
     let age = today.getFullYear() - birth.getFullYear();
     const m = today.getMonth() - birth.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
@@ -98,8 +100,24 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
         });
     };
 
+    const handleEditStart = () => {
+        setFormData({
+            location: user.location || '',
+            hobbies: user.hobbies || [],
+            aboutMe: user.aboutMe || '',
+            relationshipStatus: user.relationshipStatus || '',
+            note: user.note || '',
+            birthDate: user.birthDate || '',
+        });
+        setIsEditing(true);
+    };
+
     const handleSave = () => {
-        onUpdateProfile(formData);
+        const dataToSave = { ...formData };
+        if (dataToSave.birthDate === '') {
+            dataToSave.birthDate = undefined;
+        }
+        onUpdateProfile(dataToSave);
         setIsEditing(false);
     };
 
@@ -143,7 +161,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
         );
     }
 
-    const displayedAge = user.birthDate ? calculateAge(user.birthDate) : user.age;
+    const displayedAge = (user.birthDate && user.birthDate !== '') ? calculateAge(user.birthDate) : user.age;
 
     return (
         <>
@@ -174,7 +192,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                     )}
                 </div>
                 <div className="text-left">
-                    <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">{user.name}{displayedAge ? `, ${displayedAge}` : ''}</h2>
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">{user.name}{displayedAge > 0 ? `, ${displayedAge}` : ''}</h2>
                     <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter mt-1">{user.location}</p>
                 </div>
             </div>
@@ -205,7 +223,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 
             <div className="mt-6 bg-gray-100 dark:bg-gray-700/50 rounded-lg divide-y divide-gray-200 dark:divide-gray-600 px-4">
                 <InfoRow icon={LocationPinIcon} label="Місто" value={user.location} />
-                {user.birthDate && (
+                {user.birthDate && user.birthDate !== '' && (
                     <InfoRow 
                         icon={SparklesIcon} 
                         label="Дата народження та Зодіак" 
@@ -219,7 +237,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 
             <div className="mt-8">
                 {isCurrentUser && (
-                    <button onClick={() => setIsEditing(true)} className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors shadow-lg">
+                    <button onClick={handleEditStart} className="w-full flex items-center justify-center space-x-2 bg-purple-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors shadow-lg">
                         <PencilIcon className="w-5 h-5" /><span>Редагувати профіль</span>
                     </button>
                 )}

@@ -100,6 +100,11 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
                     <div className="flex items-center space-x-1 sm:space-x-2 overflow-hidden">
                         <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" title={user.name}>
                             {user.name}
+                            {((user.birthDate && user.birthDate !== '') || user.age) && (
+                                <span className="ml-1 opacity-75">
+                                    , {user.birthDate ? (new Date().getFullYear() - new Date(user.birthDate).getFullYear() - (new Date() < new Date(new Date().getFullYear(), new Date(user.birthDate).getMonth(), new Date(user.birthDate).getDate()) ? 1 : 0)) : user.age}
+                                </span>
+                            )}
                         </h3>
                         {isCurrentUser && <span className="text-[9px] sm:text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 font-black uppercase shadow-md">Ви</span>}
                     </div>

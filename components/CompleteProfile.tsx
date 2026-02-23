@@ -65,7 +65,11 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({ user, onComplete }) =
         }
         setError('');
         setIsLoading(true);
-        await onComplete(formData);
+        const dataToSave = { ...formData };
+        if (dataToSave.birthDate === '') {
+            dataToSave.birthDate = undefined;
+        }
+        await onComplete(dataToSave);
         // On success, the component will be unmounted by the parent.
     };
     
