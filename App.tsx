@@ -9,19 +9,19 @@ import AuthFlow, { RegistrationData } from './components/AuthFlow';
 import ProfilePage from './components/ProfilePage';
 import MessagesPage from './components/MessagesPage';
 import ChatPage from './components/ChatPage';
-import HomePage from './components/HomePage';
 import { supabase } from './supabaseClient';
 import { Session, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import CompleteProfile from './components/CompleteProfile';
 import ShopPage from './components/ShopPage';
 import TopUpPage from './components/TopUpPage';
 import FakePaymentPage from './components/FakePaymentPage';
+import SettingsPage from './components/SettingsPage';
 
 type View = 
     | { name: 'rating' }
-    | { name: 'home' }
     | { name: 'me' }
     | { name: 'menu' }
+    | { name: 'settings' }
     | { name: 'profile'; user: User }
     | { name: 'messages' }
     | { name: 'chat'; withUser: User }
@@ -56,7 +56,7 @@ const App: React.FC = () => {
     const [view, setView] = useState<View>({ name: 'rating' });
     const [theme, setTheme] = useState(localStorage.getItem('topper-theme') || 'dark');
     
-    const activeTab = ['rating', 'home', 'me', 'menu'].includes(view.name) ? view.name : '';
+    const activeTab = ['rating', 'me', 'menu'].includes(view.name) ? view.name : '';
     
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -357,9 +357,6 @@ const App: React.FC = () => {
         switch (view.name) {
             case 'rating':
                 return <Leaderboard users={sortedUsers} currentUser={currentUser} onLike={handleLikeUser} onGift={handleNavigateToShop} onViewProfile={(user) => setView({ name: 'profile', user })} />;
-            case 'home':
-                const topUsersInCity = sortedUsers.filter(u => u.location === currentUser.location).slice(0, 3);
-                return <HomePage city={currentUser.location || ''} topUsers={topUsersInCity} onViewProfile={(user) => setView({ name: 'profile', user })} />;
             case 'me':
                 return <ProfilePage user={currentUser} rating={calculateRating(currentUser)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onLike={handleLikeUser} onGift={handleNavigateToShop} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
             case 'menu':
@@ -370,6 +367,8 @@ const App: React.FC = () => {
                 return <MessagesPage currentUser={currentUser} allUsers={users} messages={messages} onViewChat={(user) => setView({ name: 'chat', withUser: user })} onBack={() => setView({ name: 'menu' })} />;
             case 'chat':
                 return <ChatPage currentUser={currentUser} chatPartner={view.withUser} messages={messages} onSendMessage={handleSendMessage} onBack={() => setView({ name: 'messages' })} />;
+            case 'settings':
+                return <SettingsPage currentUser={currentUser} theme={theme} setTheme={setTheme} onBack={() => setView({ name: 'menu' })} onUpdateProfile={handleUpdateProfile} />;
             case 'shop':
                 return <ShopPage currentUser={currentUser} targetUser={view.forUser} onSendGift={handleSendGift} onBack={() => view.forUser ? setView({ name: 'profile', user: view.forUser }) : setView({ name: 'menu' })} />;
             case 'topup':
@@ -386,7 +385,7 @@ const App: React.FC = () => {
 
     return (
         <div className="h-full grid grid-rows-[auto_1fr]">
-            <Header currentUser={currentUser} onClaimLikes={handleClaimDailyLikes} />
+            <Header currentUser={currentUser} onClaimLikes={handleClaimDailyLikes} onNavigate={(tab) => setView({name: tab as any})} />
             <main className="overflow-y-auto p-4 sm:p-6 lg:p-8 pb-20">{renderContent()}</main>
             <Navbar activeTab={activeTab} onTabChange={(tab) => setView({name: tab as any})} />
         </div>

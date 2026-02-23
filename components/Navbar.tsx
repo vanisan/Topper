@@ -1,6 +1,5 @@
 
 import React from 'react';
-import HomeIcon from './icons/HomeIcon';
 import TrophyIcon from './icons/TrophyIcon';
 import UserIcon from './icons/UserIcon';
 import MenuIcon from './icons/MenuIcon';
@@ -11,9 +10,7 @@ interface NavbarProps {
 }
 
 const navItems = [
-    { name: 'home', label: 'Головна', icon: HomeIcon },
     { name: 'rating', label: 'Рейтинг', icon: TrophyIcon },
-    { name: 'me', label: 'Я', icon: UserIcon },
     { name: 'menu', label: 'Меню', icon: MenuIcon },
 ];
 

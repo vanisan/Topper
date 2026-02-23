@@ -31,6 +31,7 @@ export interface User {
   passiveRating: number;
   availableLikes: number;
   lastRechargeAt: string;
+  birthDate?: string;
   age?: number;
   hobbies?: string[];
   aboutMe?: string;

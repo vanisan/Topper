@@ -10,6 +10,9 @@ BEGIN
     IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'lastRechargeAt') THEN
         ALTER TABLE public.profiles ADD COLUMN "lastRechargeAt" timestamp with time zone DEFAULT '1970-01-01' NOT NULL;
     END IF;
+    IF NOT EXISTS (SELECT FROM pg_attribute WHERE attrelid = 'public.profiles'::regclass AND attname = 'birthDate') THEN
+        ALTER TABLE public.profiles ADD COLUMN "birthDate" date;
+    END IF;
 END $$;
 
 -- Оновлення handle_new_user для підтримки нових колонок
@@ -31,7 +34,8 @@ begin
     "relationshipStatus",
     balance,
     "availableLikes",
-    "lastRechargeAt"
+    "lastRechargeAt",
+    "birthDate"
   )
   values (
     new.id,
@@ -45,7 +49,8 @@ begin
     new.raw_user_meta_data->>'relationshipStatus',
     0,
     0,
-    '1970-01-01'
+    '1970-01-01',
+    (new.raw_user_meta_data->>'birthDate')
   );
   return new;
 end;

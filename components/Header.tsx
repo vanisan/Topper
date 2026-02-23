@@ -4,12 +4,16 @@ import { User } from '../types';
 import HeartIcon from './icons/HeartIcon';
 import SparklesIcon from './icons/SparklesIcon';
 
+import UserIcon from './icons/UserIcon';
+import SettingsIcon from './icons/SettingsIcon';
+
 interface HeaderProps {
     currentUser: User;
     onClaimLikes: () => void;
+    onNavigate: (view: string) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, onClaimLikes }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, onClaimLikes, onNavigate }) => {
     const now = new Date();
     const lastClaim = new Date(currentUser.lastRechargeAt);
     const isSameDay = now.getFullYear() === lastClaim.getFullYear() &&
@@ -47,12 +51,28 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onClaimLikes }) => {
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-2 sm:space-x-4">
+                <div className="flex items-center space-x-3 sm:space-x-5">
                     <div className="text-right hidden xs:block">
                         <p className="text-sm font-black text-gray-900 dark:text-white leading-none">{currentUser.name}</p>
                         <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter">{currentUser.location}</p>
                     </div>
-                    <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-purple-500 dark:border-purple-400 object-cover shadow-md" />
+                    
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                        <button 
+                            onClick={() => onNavigate('me')}
+                            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors shadow-sm"
+                            aria-label="Профіль"
+                        >
+                            <UserIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </button>
+                        <button 
+                            onClick={() => onNavigate('settings')}
+                            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400 transition-colors shadow-sm"
+                            aria-label="Налаштування"
+                        >
+                            <SettingsIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>

@@ -21,7 +21,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({ user, onComplete }) =
     const [formData, setFormData] = useState<Partial<User>>({
         name: user.name || '',
         avatarUrl: user.avatarUrl || `https://i.pravatar.cc/150?u=${user.login}`,
-        age: user.age,
+        birthDate: user.birthDate || '',
         location: user.location || '',
         hobbies: user.hobbies || [],
         aboutMe: user.aboutMe || '',
@@ -96,7 +96,10 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({ user, onComplete }) =
                         </div>
 
                         <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="* Ваше ім'я" required className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700" />
-                        <input type="number" name="age" value={formData.age || ''} onChange={e => setFormData({ ...formData, age: e.target.value ? parseInt(e.target.value) : undefined })} placeholder="Вік" className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700" />
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1 uppercase">Дата народження</label>
+                            <input type="date" name="birthDate" value={formData.birthDate} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700" />
+                        </div>
                         <select name="location" value={formData.location} onChange={handleInputChange} required className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700">
                             <option value="">* Оберіть місто...</option>
                             {ukrainianCities.map(city => <option key={city} value={city}>{city}</option>)}

@@ -29,6 +29,36 @@ interface ProfilePageProps {
 const HOBBY_OPTIONS = ["Спорт", "Музика", "Мистецтво", "Ігри", "Подорожі", "Читання", "Кулінарія", "Кіно", "Технології", "Мода"];
 const RELATIONSHIP_OPTIONS = ["Неодружений/Незаміжня", "У стосунках", "Одружений/Заміжня", "Все складно"];
 
+const getZodiacSign = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    if ((month === 1 && day >= 20) || (month === 2 && day <= 18)) return "Водолій ♒";
+    if ((month === 2 && day >= 19) || (month === 3 && day <= 20)) return "Риби ♓";
+    if ((month === 3 && day >= 21) || (month === 4 && day <= 19)) return "Овен ♈";
+    if ((month === 4 && day >= 20) || (month === 5 && day <= 20)) return "Телець ♉";
+    if ((month === 5 && day >= 21) || (month === 6 && day <= 20)) return "Близнюки ♊";
+    if ((month === 6 && day >= 21) || (month === 7 && day <= 22)) return "Рак ♋";
+    if ((month === 7 && day >= 23) || (month === 8 && day <= 22)) return "Лев ♌";
+    if ((month === 8 && day >= 23) || (month === 9 && day <= 22)) return "Діва ♍";
+    if ((month === 9 && day >= 23) || (month === 10 && day <= 22)) return "Терези ♎";
+    if ((month === 10 && day >= 23) || (month === 11 && day <= 21)) return "Скорпіон ♏";
+    if ((month === 11 && day >= 22) || (month === 12 && day <= 21)) return "Стрілець ♐";
+    if ((month === 12 && day >= 22) || (month === 1 && day <= 19)) return "Козоріг ♑";
+    return "";
+};
+
+const calculateAge = (birthDate: string): number => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    return age;
+};
+
 const formatRating = (num: number): string => {
     if (num >= 1000) {
         return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'к';
@@ -45,6 +75,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
         aboutMe: user.aboutMe || '',
         relationshipStatus: user.relationshipStatus || '',
         note: user.note || '',
+        birthDate: user.birthDate || '',
     });
 
     const isCurrentUser = user.id === currentUser.id;
@@ -84,6 +115,10 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                     </div>
                 </div>
                  <div className="space-y-2">
+                    <label className="font-bold text-gray-800 dark:text-gray-200">Дата народження</label>
+                    <input type="date" name="birthDate" value={formData.birthDate} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none text-gray-900 dark:text-white font-medium" />
+                 </div>
+                 <div className="space-y-2">
                     <label className="font-bold text-gray-800 dark:text-gray-200">Місто</label>
                     <select name="location" value={formData.location} onChange={handleInputChange} className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-purple-500 outline-none text-gray-900 dark:text-white font-medium">
                         <option value="">Не вказано</option>
@@ -108,6 +143,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
         );
     }
 
+    const displayedAge = user.birthDate ? calculateAge(user.birthDate) : user.age;
+
     return (
         <>
         {isUploaderOpen && (
@@ -127,8 +164,8 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
             )}
 
 
-            <div className="text-center pt-8">
-                <div className="relative w-24 h-24 mx-auto">
+            <div className="flex items-center space-x-6 pt-5">
+                <div className="relative w-24 h-24 flex-shrink-0">
                     <img src={user.avatarUrl} alt={user.name} className="w-24 h-24 rounded-full object-cover border-4 border-purple-500 shadow-md" />
                      {isCurrentUser && (
                         <button onClick={() => setIsUploaderOpen(true)} className="absolute -bottom-2 -right-2 bg-purple-600 text-white p-2 rounded-full hover:bg-purple-700 transition-colors shadow-lg">
@@ -136,10 +173,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
                         </button>
                     )}
                 </div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white mt-4">{user.name}{user.age ? `, ${user.age}` : ''}</h2>
+                <div className="text-left">
+                    <h2 className="text-2xl font-black text-gray-900 dark:text-white leading-tight">{user.name}{displayedAge ? `, ${displayedAge}` : ''}</h2>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter mt-1">{user.location}</p>
+                </div>
             </div>
             
-            <div className="mt-4">
+            <div className="mt-5">
                  <div className="flex justify-between items-center mb-1 text-sm font-bold">
                     <span className="text-purple-700 dark:text-purple-300">Рейтинг</span>
                     <span className="text-gray-900 dark:text-white">{formatRating(rating)}</span>
@@ -165,6 +205,13 @@ const ProfilePage: React.FC<ProfilePageProps> = ({ user, currentUser, rating, on
 
             <div className="mt-6 bg-gray-100 dark:bg-gray-700/50 rounded-lg divide-y divide-gray-200 dark:divide-gray-600 px-4">
                 <InfoRow icon={LocationPinIcon} label="Місто" value={user.location} />
+                {user.birthDate && (
+                    <InfoRow 
+                        icon={SparklesIcon} 
+                        label="Дата народження та Зодіак" 
+                        value={`${new Date(user.birthDate).toLocaleDateString('uk-UA')} • ${getZodiacSign(user.birthDate)}`} 
+                    />
+                )}
                 <InfoRow icon={SparklesIcon} label="Хобі" value={user.hobbies} />
                 <InfoRow icon={UsersIcon} label="Статус" value={user.relationshipStatus} />
                 <InfoRow icon={DocumentTextIcon} label="Про себе" value={user.aboutMe} />
@@ -193,7 +240,7 @@ const InfoRow: React.FC<{ icon: React.FC<{ className?: string }>, label: string,
     const displayValue = Array.isArray(value) ? value.join(', ') : value;
     if (!displayValue) return null;
     return (
-        <div className="flex items-start space-x-4 py-4 first:pt-3 last:pb-3">
+        <div className="flex items-start space-x-4 py-2 first:pt-1 last:pb-1">
             <Icon className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1 break-words">
                 <h4 className="text-[10px] font-black text-gray-600 dark:text-gray-400 mb-0.5 uppercase tracking-widest">{label}</h4>
