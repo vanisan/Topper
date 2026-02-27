@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { User } from '../types';
 import CrownIcon from './icons/CrownIcon';
 import HeartIcon from './icons/HeartIcon';
@@ -13,6 +13,22 @@ interface UserProfileCardProps {
     onGift: (user: User) => void;
     onViewProfile: (user: User) => void;
 }
+
+const getLuminance = (hex: string): number => {
+    hex = hex.replace("#", "");
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+const isDark = (gradient: string): boolean => {
+    const colors = gradient.match(/#([a-fA-F0-9]{6})/g);
+    if (!colors) return true; // Default to dark if parsing fails
+    const avgLuminance = colors.reduce((acc, color) => acc + getLuminance(color), 0) / colors.length;
+    return avgLuminance < 140;
+};
+
 
 const formatRating = (num: number): string => {
     if (num >= 1000) {
@@ -29,7 +45,15 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
     };
 
     const cardBorder = rank <= 3 ? rankColors[rank] : 'border-gray-200 dark:border-gray-700';
-    const textColor = rank <= 3 ? rankColors[rank] : 'text-gray-500 dark:text-gray-400';
+    const [isBgDark, setIsBgDark] = useState(true);
+
+    useEffect(() => {
+        setIsBgDark(isDark(user.profileBgColor || ''));
+    }, [user.profileBgColor]);
+
+    const dynamicTextColor = isBgDark ? 'text-white' : 'text-gray-900';
+    const dynamicSubTextColor = isBgDark ? 'text-gray-200' : 'text-gray-800';
+
 
     const handleCardClick = (e: React.MouseEvent) => {
         if ((e.target as HTMLElement).closest('button')) {
@@ -88,7 +112,7 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
             
             <div className="relative z-10 flex items-center space-x-2 sm:space-x-4">
                 {/* Rank */}
-                <div className={`text-xl sm:text-2xl font-black w-6 sm:w-10 text-center drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)] ${textColor} flex-shrink-0`}>
+                <div className={`text-xl sm:text-2xl font-black w-6 sm:w-10 text-center drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)] ${rank <= 3 ? rankColors[rank] : dynamicSubTextColor} flex-shrink-0`}>
                     {rank}
                 </div>
 
@@ -98,18 +122,13 @@ const UserProfileCard: React.FC<UserProfileCardProps> = ({ user, rank, isCurrent
                 {/* Info Container */}
                 <div className="flex-grow min-w-0 overflow-hidden">
                     <div className="flex items-center space-x-1 sm:space-x-2 overflow-hidden">
-                        <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]" title={user.name}>
+                        <h3 className={`text-sm sm:text-lg font-black ${dynamicTextColor} truncate drop-shadow-[0_1px_2px_rgba(0,0,0,0.5)]`} title={user.name}>
                             {user.name}
-                            {((user.birthDate && user.birthDate !== '') || user.age) && (
-                                <span className="ml-1 opacity-75">
-                                    , {user.birthDate ? (new Date().getFullYear() - new Date(user.birthDate).getFullYear() - (new Date() < new Date(new Date().getFullYear(), new Date(user.birthDate).getMonth(), new Date(user.birthDate).getDate()) ? 1 : 0)) : user.age}
-                                </span>
-                            )}
                         </h3>
                         {isCurrentUser && <span className="text-[9px] sm:text-xs bg-purple-600 text-white px-1.5 py-0.5 rounded-full flex-shrink-0 font-black uppercase shadow-md">Ви</span>}
                     </div>
-                    <p className="text-[10px] sm:text-sm font-black text-gray-800 dark:text-gray-200 truncate uppercase tracking-tighter drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">{user.location}</p>
-                    <p className="text-sm sm:text-xl font-black text-gray-900 dark:text-white mt-0.5 drop-shadow-[0_2px_3px_rgba(0,0,0,0.4)]">{formatRating(user.rating)} ⭐</p>
+                    <p className={`text-[10px] sm:text-sm font-black ${dynamicSubTextColor} truncate uppercase tracking-tighter drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]`}>{user.location}</p>
+                    <p className={`text-sm sm:text-xl font-black ${dynamicTextColor} mt-0.5 drop-shadow-[0_2px_3px_rgba(0,0,0,0.4)]`}>{formatRating(user.rating)} ⭐</p>
 
                     {user.giftsReceived && user.giftsReceived.length > 0 && (
                         <div className="mt-1 flex items-center space-x-1 overflow-hidden" aria-label="Останні подарунки">

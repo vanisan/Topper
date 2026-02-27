@@ -4,7 +4,6 @@ import { User, Gift, Message } from './types';
 import Header from './components/Header';
 import Leaderboard from './components/Leaderboard';
 import Navbar from './components/Navbar';
-import MenuPage from './components/MenuPage';
 import AuthFlow, { RegistrationData } from './components/AuthFlow';
 import ProfilePage from './components/ProfilePage';
 import MessagesPage from './components/MessagesPage';
@@ -16,11 +15,12 @@ import ShopPage from './components/ShopPage';
 import TopUpPage from './components/TopUpPage';
 import FakePaymentPage from './components/FakePaymentPage';
 import SettingsPage from './components/SettingsPage';
+import CityChatPage from './components/CityChatPage';
 
 type View = 
     | { name: 'rating' }
+    | { name: 'city-chat' }
     | { name: 'me' }
-    | { name: 'menu' }
     | { name: 'settings' }
     | { name: 'profile'; user: User }
     | { name: 'messages' }
@@ -56,7 +56,7 @@ const App: React.FC = () => {
     const [view, setView] = useState<View>({ name: 'rating' });
     const [theme, setTheme] = useState(localStorage.getItem('topper-theme') || 'dark');
     
-    const activeTab = ['rating', 'me', 'menu'].includes(view.name) ? view.name : '';
+    const activeTab = ['rating', 'me', 'city-chat', 'messages'].includes(view.name) ? view.name : '';
     
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -217,18 +217,12 @@ const App: React.FC = () => {
     const handleClaimDailyLikes = async () => {
         if (!currentUser) return;
         
-        const now = new Date();
-        const lastClaim = new Date(currentUser.lastRechargeAt);
-        
-        const isSameDay = now.getFullYear() === lastClaim.getFullYear() &&
-                          now.getMonth() === lastClaim.getMonth() &&
-                          now.getDate() === lastClaim.getDate();
-        
-        // Allow claim if it's a different day OR if they've never claimed (1970 date)
-        const neverClaimed = lastClaim.getFullYear() === 1970;
+        const now = new Date().getTime();
+        const lastClaim = new Date(currentUser.lastRechargeAt).getTime();
+        const twentyFourHours = 24 * 60 * 60 * 1000;
 
-        if (isSameDay && !neverClaimed) {
-            alert("Ви вже забирали сьогоднішні лайки!");
+        if (now - lastClaim < twentyFourHours) {
+            alert("Ви можете забирати лайки лише раз на 24 години.");
             return;
         }
 
@@ -237,7 +231,7 @@ const App: React.FC = () => {
                 .from('profiles')
                 .update({ 
                     availableLikes: currentUser.availableLikes + 3,
-                    lastRechargeAt: now.toISOString()
+                    lastRechargeAt: new Date().toISOString()
                 })
                 .eq('id', currentUser.id)
                 .select()
@@ -357,24 +351,24 @@ const App: React.FC = () => {
         switch (view.name) {
             case 'rating':
                 return <Leaderboard users={sortedUsers} currentUser={currentUser} onLike={handleLikeUser} onGift={handleNavigateToShop} onViewProfile={(user) => setView({ name: 'profile', user })} />;
+            case 'city-chat':
+                return <CityChatPage currentUser={currentUser} allUsers={users} />;
             case 'me':
                 return <ProfilePage user={currentUser} rating={calculateRating(currentUser)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onLike={handleLikeUser} onGift={handleNavigateToShop} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
-            case 'menu':
-                return <MenuPage theme={theme} setTheme={setTheme} onNavigate={(page) => setView({ name: page as any })} onLogout={handleLogout} unreadCount={unreadMessagesCount} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} />;
             case 'profile':
                 return <ProfilePage user={view.user} rating={calculateRating(view.user)} currentUser={currentUser} onUpdateProfile={handleUpdateProfile} onBack={() => setView({ name: 'rating' })} onLike={handleLikeUser} onGift={handleNavigateToShop} onSendMessage={(user) => setView({ name: 'chat', withUser: user })} />;
             case 'messages':
-                return <MessagesPage currentUser={currentUser} allUsers={users} messages={messages} onViewChat={(user) => setView({ name: 'chat', withUser: user })} onBack={() => setView({ name: 'menu' })} />;
+                return <MessagesPage currentUser={currentUser} allUsers={users} messages={messages} onViewChat={(user) => setView({ name: 'chat', withUser: user })} onBack={() => setView({ name: 'rating' })} />;
             case 'chat':
                 return <ChatPage currentUser={currentUser} chatPartner={view.withUser} messages={messages} onSendMessage={handleSendMessage} onBack={() => setView({ name: 'messages' })} />;
             case 'settings':
-                return <SettingsPage currentUser={currentUser} theme={theme} setTheme={setTheme} onBack={() => setView({ name: 'menu' })} onUpdateProfile={handleUpdateProfile} />;
+                return <SettingsPage currentUser={currentUser} theme={theme} setTheme={setTheme} onBack={() => setView({ name: 'rating' })} onUpdateProfile={handleUpdateProfile} />;
             case 'shop':
-                return <ShopPage currentUser={currentUser} targetUser={view.forUser} onSendGift={handleSendGift} onBack={() => view.forUser ? setView({ name: 'profile', user: view.forUser }) : setView({ name: 'menu' })} />;
+                return <ShopPage currentUser={currentUser} targetUser={view.forUser} onSendGift={handleSendGift} onBack={() => view.forUser ? setView({ name: 'profile', user: view.forUser }) : setView({ name: 'rating' })} />;
             case 'topup':
-                return <TopUpPage currentUser={currentUser} onProceedToPayment={handleProceedToPayment} onBack={() => setView({ name: 'menu' })} />;
+                return <TopUpPage currentUser={currentUser} onProceedToPayment={handleProceedToPayment} onBack={() => setView({ name: 'settings' })} />;
             case 'payment':
-                return <FakePaymentPage amount={view.amount} onPaymentSuccess={handleTopUp} onCancel={() => setView({ name: 'topup' })} onPaymentComplete={() => setView({ name: 'menu' })} />;
+                return <FakePaymentPage amount={view.amount} onPaymentSuccess={handleTopUp} onCancel={() => setView({ name: 'topup' })} onPaymentComplete={() => setView({ name: 'settings' })} />;
             default: return null;
         }
     };
