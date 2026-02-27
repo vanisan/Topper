@@ -5,6 +5,7 @@ import SunIcon from './icons/SunIcon';
 import MoonIcon from './icons/MoonIcon';
 import { User } from '../types';
 import PhotographIcon from './icons/PhotographIcon';
+import LogoutIcon from './icons/LogoutIcon';
 import { GRADIENT_PALETTE } from '../data/gradients';
 
 interface SettingsPageProps {
@@ -13,11 +14,12 @@ interface SettingsPageProps {
     setTheme: (theme: string) => void;
     onBack: () => void;
     onUpdateProfile: (updatedData: Partial<User>) => void;
+    onLogout: () => void;
 }
 
 const EMOJI_OPTIONS = ['✨', '🚀', '❤️', '👑', '💎', '🌟', '💐', '⚙️', '🎮', '🎨'];
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, theme, setTheme, onBack, onUpdateProfile }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, theme, setTheme, onBack, onUpdateProfile, onLogout }) => {
     const isDark = theme === 'dark';
 
     const toggleTheme = () => {
@@ -98,6 +100,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ currentUser, theme, setThem
                         </div>
                     </div>
                 </div>
+
+                <button 
+                    onClick={onLogout}
+                    className="w-full bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 font-bold py-3 px-4 rounded-lg flex items-center justify-center space-x-2 hover:bg-red-500/20 dark:hover:bg-red-500/30 transition-colors"
+                >
+                    <LogoutIcon className="w-5 h-5" />
+                    <span>Вийти з акаунту</span>
+                </button>
             </div>
         </div>
     );

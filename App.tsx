@@ -362,7 +362,7 @@ const App: React.FC = () => {
             case 'chat':
                 return <ChatPage currentUser={currentUser} chatPartner={view.withUser} messages={messages} onSendMessage={handleSendMessage} onBack={() => setView({ name: 'messages' })} />;
             case 'settings':
-                return <SettingsPage currentUser={currentUser} theme={theme} setTheme={setTheme} onBack={() => setView({ name: 'rating' })} onUpdateProfile={handleUpdateProfile} />;
+                return <SettingsPage currentUser={currentUser} theme={theme} setTheme={setTheme} onBack={() => setView({ name: 'rating' })} onUpdateProfile={handleUpdateProfile} onLogout={handleLogout} />;
             case 'shop':
                 return <ShopPage currentUser={currentUser} targetUser={view.forUser} onSendGift={handleSendGift} onBack={() => view.forUser ? setView({ name: 'profile', user: view.forUser }) : setView({ name: 'rating' })} />;
             case 'topup':
